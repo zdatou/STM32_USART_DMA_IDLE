@@ -63,3 +63,5 @@
 ..\obj\main.o: ..\HARDWARE\KEY\key.h
 ..\obj\main.o: ..\SYSTEM\task\task.h
 ..\obj\main.o: ..\HARDWARE\TIMER\timer.h
+..\obj\main.o: ..\HARDWARE\OLED\oled.h
+..\obj\main.o: D:\Software\MDK5\ARM\ARMCC\Bin\..\include\stdlib.h

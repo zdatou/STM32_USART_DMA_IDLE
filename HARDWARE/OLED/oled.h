@@ -23,20 +23,40 @@ DC   ~ PB7
 CLK  ~ PB6
 DIN ~ PB5
 */
-#define OLED_CS_Clr()  GPIO_ResetBits(GPIOD,GPIO_Pin_9)//CS
-#define OLED_CS_Set()  GPIO_SetBits(GPIOD,GPIO_Pin_9)
+#define OLED_CS_Clr()  HAL_GPIO_WritePin(GPIOD, GPIO_PIN_9, GPIO_PIN_RESET)//CS
+#define OLED_CS_Set()  HAL_GPIO_WritePin(GPIOD,GPIO_PIN_9, GPIO_PIN_SET)
 
-#define OLED_RST_Clr() GPIO_ResetBits(GPIOD,GPIO_Pin_10)//RES
-#define OLED_RST_Set() GPIO_SetBits(GPIOD,GPIO_Pin_10)
+#define OLED_RST_Clr() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_10, GPIO_PIN_RESET)//RES
+#define OLED_RST_Set() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_10, GPIO_PIN_SET)
 
-#define OLED_DC_Clr() GPIO_ResetBits(GPIOD,GPIO_Pin_11)//DC
-#define OLED_DC_Set() GPIO_SetBits(GPIOD,GPIO_Pin_11)
+#define OLED_DC_Clr() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_11, GPIO_PIN_RESET)//DC
+#define OLED_DC_Set() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_11, GPIO_PIN_SET)
 
-#define OLED_SCLK_Clr() GPIO_ResetBits(GPIOD,GPIO_Pin_12)//CLK
-#define OLED_SCLK_Set() GPIO_SetBits(GPIOD,GPIO_Pin_12)
+#define OLED_SCLK_Clr() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_12, GPIO_PIN_RESET)//CLK
+#define OLED_SCLK_Set() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_12, GPIO_PIN_SET)
 
-#define OLED_SDIN_Clr() GPIO_ResetBits(GPIOD,GPIO_Pin_13)//DIN
-#define OLED_SDIN_Set() GPIO_SetBits(GPIOD,GPIO_Pin_13)
+#define OLED_SDIN_Clr() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_13, GPIO_PIN_RESET)//DIN
+#define OLED_SDIN_Set() HAL_GPIO_WritePin(GPIOD,GPIO_PIN_13, GPIO_PIN_SET)
+
+//引脚定义
+/**/
+#define LcdControl_GPIO_Port  GPIOC
+#define LcdSCL_Pin GPIO_PIN_4
+#define LcdSDA_Pin GPIO_PIN_5
+#define LcdRST_Pin GPIO_PIN_0
+#define LcdDC_Pin  GPIO_PIN_1
+#define LCD_CLK_ENABLE()   do{__HAL_RCC_GPIOC_CLK_ENABLE();\
+							  __HAL_RCC_GPIOB_CLK_ENABLE();}while(0)
+/**/
+
+
+#define LCD_SCL(x)  x?HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdSCL_Pin,GPIO_PIN_SET):HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdSCL_Pin,GPIO_PIN_RESET)      //SCLK  时钟 D0（SCLK）
+#define LCD_SDA(x)  x?HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdSDA_Pin,GPIO_PIN_SET):HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdSDA_Pin,GPIO_PIN_RESET)      //SDA   D1（MOSI） 数据
+#define LCD_RST(x)  x?HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdRST_Pin,GPIO_PIN_SET):HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdRST_Pin,GPIO_PIN_RESET)  //_RES  hardware reset   复位 
+#define LCD_DC(x)   x?HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdDC_Pin,GPIO_PIN_SET):HAL_GPIO_WritePin(LcdControl_GPIO_Port,LcdDC_Pin,GPIO_PIN_RESET)   //A0  H/L 命令数据选通端，H：数据，L:命令
+
+
+
 
 
  		     
@@ -83,6 +103,15 @@ void Show_MYHZ12_12(unsigned char  x,unsigned char  y, unsigned char  d,char num
 void MYHZ16_16( unsigned char x, unsigned char y, char num[2]);
 void Show_MYHZ16_16(unsigned char  x,unsigned char  y, unsigned char  d,char num[]);
 
+
+void OLED_ShowString(u8 x,u8 y, u8 *p,u8 size, u8 gray);
+void OLED_ShowChar(unsigned char x,unsigned char y,unsigned char chr, u8 size, u8 mode, u8 gray);
+void OLED_Refresh_Gram(void);
+void OLED_DrawPoint(u8 x,u8 y,u8 t);
+void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray);
+void OLED_Clear(void);
+void OLED_ShowNum(u8 x,u8 y,u32 num,u8 len,u8 size, u8 gray);
+void OLED_Fill(u8 x1,u8 y1,u8 x2,u8 y2,u8 dot);
 #endif  
 	 
 

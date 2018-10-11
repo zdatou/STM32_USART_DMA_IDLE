@@ -61,3 +61,5 @@
 ..\obj\task.o: ..\HARDWARE\LED\led.h
 ..\obj\task.o: ..\HARDWARE\KEY\key.h
 ..\obj\task.o: ..\SYSTEM\usart\usart.h
+..\obj\task.o: ..\HARDWARE\OLED\oled.h
+..\obj\task.o: D:\Software\MDK5\ARM\ARMCC\Bin\..\include\stdlib.h

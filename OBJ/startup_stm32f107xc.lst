@@ -604,8 +604,8 @@ ARM Macro Assembler    Page 10
               00000200 
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M3 --apcs=interw
-ork --depend=..\obj\startup_stm32f107xc.d -o..\obj\startup_stm32f107xc.o -I"C:\
-Users\datou\Desktop\HAL_107\实验3 串口通信实验\USER\RTE" -ID:\Software\MDK5\ARM
+ork --depend=..\obj\startup_stm32f107xc.d -o..\obj\startup_stm32f107xc.o -IC:\U
+sers\datou\Desktop\HAL_107\STM32_USART_DMA_IDLE\USER\RTE -ID:\Software\MDK5\ARM
 \PACK\Keil\STM32F1xx_DFP\2.2.0\Device\Include -ID:\Software\MDK5\ARM\CMSIS\Incl
 ude --predefine="__UVISION_VERSION SETA 521" --predefine="STM32F10X_CL SETA 1" 
 --list=..\obj\startup_stm32f107xc.lst ..\CORE\asm\startup_stm32f107xc.s

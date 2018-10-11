@@ -5,6 +5,7 @@
 #include "key.h"
 #include "task.h"
 #include "timer.h"
+#include "oled.h"
 
 void SystemClock_Config(void);
 void usart_init(void);
@@ -19,6 +20,7 @@ int main(void)
 	TIM3_Init(1000, 72);
 	usart_init();
 	InitTask();
+	OLED_Init();
 	
 	while (1)
 	{

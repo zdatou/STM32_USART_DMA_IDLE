@@ -13,6 +13,306 @@
 #include "HZ12X12.h" 	   //12*12宋体自定义汉字库
 #include "string.h"
 #include "stdio.h"
+
+__align(4) u8 OLED_GRAM[64][32];	
+
+void OLED_MspInit(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct;	
+	
+	__HAL_RCC_GPIOD_CLK_ENABLE();
+	GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13;
+	GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull = GPIO_NOPULL;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+	
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13, GPIO_PIN_SET);
+}
+
+void OLED_Refresh_Gram(void)
+{
+	unsigned char i,j;
+	Set_Column_Address(Shift+0,Shift+63); // 设置列坐标，shift为列偏移量由1322决定 
+	Set_Row_Address(i,i+63);
+	Set_Write_RAM();
+	for(i=0;i<64;i++)
+	{
+		for(j=0;j<32;j++)
+		{
+			Con_4_byte(OLED_GRAM[i][j]);
+		}
+	}
+}
+
+void OLED_Clear(void)  
+{  
+	u16 i,n;  
+	for(i=0;i<32;i++)for(n=0;n<64;n++)OLED_GRAM[n][i]=0X00;  
+	//OLED_Refresh_Gram();//更新显示
+	Fill_RAM(0);
+}
+
+void OLED_DrawPoint(u8 x,u8 y,u8 t)
+{
+	u8 pos,bx,temp=0;
+	if(x>255||y>63)return;//超出范围了.
+	pos=x/8; //计算位于那一列
+	bx=x%8;
+	temp=1<<(7-bx);
+	if(t)OLED_GRAM[y][pos]|=temp;
+	else OLED_GRAM[y][pos]&=~temp;	    
+}
+//在指定位置显示一个字符
+void OLED_ShowChar(unsigned char x,unsigned char y,unsigned char chr, u8 size, u8 mode, u8 gray)
+{	
+	u8 temp, t, t1, t2; 
+	u8 *ptemp = NULL;
+	u8 x0 = x, step = 0; 
+	chr = chr - ' ';  //得到偏移后的值
+	
+	switch(size) //根据字体大小得到字体数组以及改字体每个字对应的字节数, t2为该字体每个字占屏幕多少列
+	{
+		case 8:ptemp = ASC5X8;step = 8;t2 = 8;	
+			break;
+		case 12:ptemp = ASC6X12;step = 12;t2 = 8; 		
+			break;
+		case 16:ptemp = ASC8X16;step = 16;t2 = 8;
+			break;
+		case 24:ptemp = ASC12X24;step = 48;t2 = 16;
+			break;
+		case 40:ptemp = ASC20X40;step = 120;t2 = 24;
+			break;
+		default:
+			return;
+	}
+	for(t = 0; t < step; t++)
+	{
+		temp = ptemp[chr*step+t];
+		for(t1 = 0; t1 < 8; t1++)
+		{
+			if(temp&0x80)
+			{
+				OLED_DrawPoint(x, y, mode);
+			}
+			else
+			{
+				OLED_DrawPoint(x,y,!mode);
+			}
+			temp <<= 1;
+			x++;
+			if((x-x0)==t2)
+			{
+				x = x0;
+				y++;
+				break;
+			}
+		}
+	}
+}
+
+//获取字体在字库中的索引
+u16 GetFontIndex(u8 *font, u8 fontSize)
+{
+	u16 index = 0;
+
+	if(fontSize == 12)
+	{
+		u16 len = sizeof(HZ12X12)/sizeof(HZ12X12[0]);
+		for(u16 i = 0; i < len; i++)
+		{
+			if((HZ12X12[i].Index[0]==font[0]) && (HZ12X12[i].Index[1] == font[1]))
+			{
+				index = i;
+				break;
+			}
+		}
+	}
+	else if(fontSize == 16)
+	{
+		
+	}
+	else if(fontSize == 24)
+	{
+		
+	}
+	return index;
+}
+
+//显示一个指定大小的汉字
+//x,y :汉字的坐标
+//font:汉字GBK码
+//size:字体大小
+//mode:0,正常显示,1,叠加显示	   
+void Show_Font(u16 x,u16 y,u8 *font,u8 size,u8 mode, u8 gray)
+{
+	u8 temp,t,t1;
+	u16 x0=x;
+	u16 index = 0;
+	u8 csize=(size/8+((size%8)?1:0))*(size);			//得到字体一个字符对应点阵集所占的字节数	 
+	if(size!=12&&size!=16&&size!=24&&size!=32)return;	//不支持的size
+	index = GetFontIndex(font, size);
+	
+	for(t=0;t<csize;t++)
+	{   												   
+		temp = HZ12X12[index].Msk[t];;			//得到点阵数据                          
+		for(t1=0;t1<8;t1++)
+		{
+			if(temp&0x80)
+			{
+				OLED_DrawPoint(x, y, mode);
+			}
+			else
+			{
+				OLED_DrawPoint(x,y,!mode);
+			}	
+			temp <<= 1;
+			x++;
+			if((x-x0)==size)
+			{
+				x = x0;
+				y++;
+				break;
+			}
+		}  	 
+	}  
+}
+
+
+
+//在指定位置开始显示一个字符串	    
+//支持自动换行
+//(x,y):起始坐标
+//width,height:区域
+//str  :字符串
+//size :字体大小
+//mode:0,反白显示 1,正常显示    	
+void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
+{
+	u16 x0 = x;
+	u16 y0 = y;
+	u8 bHz = 0;
+	u8 temp = 0;
+	
+	if(size == 8)temp = 5;
+	else temp = size/2;
+	
+	while(*str != 0)
+	{
+		if(!bHz)
+		{
+			if(*str > 0x80)bHz = 1; //中文
+			else
+			{
+				if(x > (256-size/2))
+				{
+					y += size;
+					x = x0;
+				}
+				if(y > (64-size))break;
+				if(*str == '\n')
+				{
+					y += size;
+					x = x0;
+					str++;
+					continue;
+				}
+				else
+				{
+					OLED_ShowChar(x, y, *str, size, mode, gray);
+				}
+				str++;
+				x += temp;
+			}
+		}
+		else
+		{
+			bHz = 0;
+			if(x > (256 - size))
+			{
+				y += size;
+				x = x0;
+			}
+			if(y > (64 -size))break;
+			Show_Font(x, y, str, size, mode, gray);
+			str += 2;
+			x += size;
+		}
+	}
+}
+
+//x1,y1,x2,y2 填充区域的对角坐标
+//确保x1<=x2;y1<=y2 0<=x1<=127 0<=y1<=63	 	 
+//dot:0,清空;1,填充	  
+void OLED_Fill(u8 x1,u8 y1,u8 x2,u8 y2,u8 dot)  
+{  
+	u8 x,y;  
+	for(x=x1;x<=x2;x++)
+	{
+		for(y=y1;y<=y2;y++)OLED_DrawPoint(x,y,dot);
+	}													    
+	OLED_Refresh_Gram();//更新显示
+}
+
+
+u32 mypow(u8 m,u8 n)
+{
+	u32 result=1;	 
+	while(n--)result*=m;    
+	return result;
+}			
+
+//显示1个数字
+//x,y :起点坐标	 
+//len :数字的位数
+//size:字体大小
+//mode:模式	0,填充模式;1,叠加模式
+//num:数值(0~4294967295);	
+void OLED_ShowNum(u8 x,u8 y,u32 num,u8 len,u8 size, u8 gray)
+{         	
+	u8 t,temp;
+	u8 enshow=0;						   
+	for(t=0;t<len;t++)
+	{
+		temp=(num/mypow(10,len-t-1))%10;
+		if(enshow==0&&t<(len-1))
+		{
+			if(temp==0)
+			{
+				OLED_ShowChar(x+(size/2)*t,y,' ',size,1, gray);
+				continue;
+			}else enshow=1;  	 
+		}
+	 	OLED_ShowChar(x+(size/2)*t,y,temp+'0',size,1, gray); 
+	}
+} 
+
+//显示字符串
+//x,y:起点坐标  
+//size:字体大小 
+//*p:字符串起始地址 
+//gray:灰度值
+void OLED_ShowString(u8 x,u8 y, u8 *p,u8 size, u8 gray)
+{
+	u8 temp = 0;
+	if(size == 8)temp = 5;
+	else temp = size/2;
+		
+	while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
+    {       
+        if(x>(256-(size/2))){x=0;y+=size;}
+        if(y>(64-size)){y=x=0;OLED_Clear();}
+        OLED_ShowChar(x,y,*p,size, 1, gray);			
+        x+=temp;
+        p++;
+    } 
+}
+
+//**********************************************************************//
+//**********************************************************************//
+//**********************************************************************//
+//**********************************************************************//
+//**********************************************************************//
 void OLED_WR_Byte(u8 dat,u8 cmd)
 {	
 	u8 i;			  
@@ -33,26 +333,18 @@ void OLED_WR_Byte(u8 dat,u8 cmd)
 	}				 		  
 	OLED_CS_Set();
 	OLED_DC_Set();   	  
-} 
+}
   
    
 //初始化SSD1322				    
 void OLED_Init(void)
 { 	
- GPIO_InitTypeDef  GPIO_InitStructure;
- 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);	 //使能B端口时钟
-  GPIO_InitStructure.GPIO_Pin =GPIO_Pin_8|GPIO_Pin_9|GPIO_Pin_10|GPIO_Pin_11|GPIO_Pin_12|GPIO_Pin_13;
- 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT; 		 //推挽输出
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;//速度50MHz
- 	GPIO_Init(GPIOD, &GPIO_InitStructure);	  //初始化PE4,PE6
- 	GPIO_SetBits(GPIOD,GPIO_Pin_8|GPIO_Pin_9|GPIO_Pin_10|GPIO_Pin_11|GPIO_Pin_12|GPIO_Pin_13);	//PE4,PE6输出高
-
+	OLED_MspInit();
  
-  OLED_RST_Set();
-	delay_ms(100);
-	OLED_RST_Clr();
-	delay_ms(100);
-	OLED_RST_Set(); 
+	LCD_SCL(1);
+    LCD_RST(0);
+    HAL_Delay(100);
+    LCD_RST(1); 
 		
 	OLED_WR_Byte(0xAE,OLED_CMD); //	Display Off
 	
@@ -147,7 +439,7 @@ void OLED_Init(void)
 
 void Set_Column_Address(unsigned char a, unsigned char b)
 {
-	OLED_WR_Byte(0x15,OLED_CMD);			// Set Column Address
+	OLED_WR_Byte(0x15,OLED_CMD);		// Set Column Address
 	OLED_WR_Byte(a,OLED_DATA);			//   Default => 0x00
 	OLED_WR_Byte(b,OLED_DATA);			//   Default => 0x77
 }
@@ -162,7 +454,6 @@ void Set_Row_Address(unsigned char a, unsigned char b)
 
 void Set_Write_RAM()
 {
- 
 	OLED_WR_Byte(0x5C,OLED_CMD);			// Enable MCU to Write into RAM
 }
 
@@ -174,8 +465,8 @@ void Set_Read_RAM()
 
  void Set_Remap_Format(unsigned char d)
 {
-	 OLED_WR_Byte(0xA0,OLED_CMD);  			// Set Re-Map / Dual COM Line Mode
-  OLED_WR_Byte(d,OLED_DATA);  				//   Default => 0x40
+	OLED_WR_Byte(0xA0,OLED_CMD);  			// Set Re-Map / Dual COM Line Mode
+	OLED_WR_Byte(d,OLED_DATA);  				//   Default => 0x40
 						//     Horizontal Address Increment
 						//     Column Address 0 Mapped to SEG0
 						//     Disable Nibble Remap
@@ -611,10 +902,9 @@ unsigned char i,j;
 // 灰度模式下显示一副图片
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 void Show_Pattern(unsigned char *Data_Pointer, unsigned char a, unsigned char b, unsigned char c, unsigned char d)
-{
-			 
-unsigned char *Src_Pointer;
-unsigned char i,j;
+{			 
+	unsigned char *Src_Pointer;
+	unsigned char i,j;
  
   //取模时候像素正序	（不能反序与2.7不同）
     Src_Pointer=Data_Pointer;
@@ -631,7 +921,6 @@ unsigned char i,j;
 			Src_Pointer++;
 		}
 	}
-
  }
 
 /**************************************
@@ -640,428 +929,54 @@ unsigned char i,j;
 ****************************************/
 void Con_4_byte(unsigned char DATA)
 {
-   unsigned char d1_4byte[4],d2_4byte[4];
-   unsigned char i;
-   unsigned char d,k1,k2;
-   d=DATA;
- 
-  for(i=0;i<2;i++)   // 一两位的方式写入  2*4=8位
-   {
-     k1=d&0xc0;     //当i=0时 为D7,D6位 当i=1时 为D5,D4位
-
-     /****有4种可能，16级灰度,一个字节数据表示两个像素，一个像素对应一个字节的4位***/
-
-     switch(k1)
-       {
-	 case 0x00:
-           d1_4byte[i]=0x00;
-		   
-         break;
-     case 0x40:  // 0100,0000
-           d1_4byte[i]=0x0f;
-		   
-         break;	
-	 case 0x80:  //1000,0000
-           d1_4byte[i]=0xf0;
-		   
-         break;
-     case 0xc0:   //1100,0000
-           d1_4byte[i]=0xff;
-		  
-         break;	 
-     default:
-      	 break;
-	   }
-     
-	   d=d<<2;
-	  k2=d&0xc0;     //当i=0时 为D7,D6位 当i=1时 为D5,D4位
-
-     /****有4种可能，16级灰度,一个字节数据表示两个像素，一个像素对应一个字节的4位***/
-
-     switch(k2)
-       {
-	 case 0x00:
-           d2_4byte[i]=0x00;
-		   
-         break;
-     case 0x40:  // 0100,0000
-           d2_4byte[i]=0x0f;
-		   
-         break;	
-	 case 0x80:  //1000,0000
-           d2_4byte[i]=0xf0;
-		 
-         break;
-     case 0xc0:   //1100,0000
-           d2_4byte[i]=0xff;
-		  
-         break;	 
-     default:
-      	 break;
-	   }
-	  
-	  d=d<<2;                                //左移两位
-      
-	 OLED_WR_Byte(d1_4byte[i],OLED_DATA);	    //写前2列
-	 OLED_WR_Byte(d2_4byte[i],OLED_DATA);               //写后2列	  共计4列
-   }
-
-}
- 
-/***************************************************************
-//  显示12*12点阵汉字 2015-05晶奥测试通过
-//  取模方式为：横向取模左高位,数据排列:从左到右从上到下    16列 12行 
-//   num：汉字在字库中的位置
-//   x: Start Column  开始列 范围 0~（256-16）
-//   y: Start Row   开始行 0~63 
-***************************************************************/
-void HZ12_12( unsigned char x, unsigned char y, unsigned char num)
-{
-	unsigned char x1,j ;
-	x1=x/4; 
-	Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
-	Set_Row_Address(y,y+11); 
-	Set_Write_RAM();	 //	写显存
-	 
-	for(j=0;j<24;j++)
-	{
-		Con_4_byte(HZ12X12[num].Msk[j]);
-	}
-}
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-unsigned char MY_Compare(char str1[2],char str2[2])
-{
+	unsigned char d1_4byte[4],d2_4byte[4];
 	unsigned char i;
-	for(i=0;i<2;i++)
+	unsigned char d,k1,k2;
+	d=DATA;
+ 
+	for(i=0;i<2;i++)   // 一两位的方式写入  2*4=8位
 	{
-		if(str1[i]!=str2[i])
-			break;
-		else if(i==1)
-			return 1;
-	}
-	if(i==0)
-	return 0;
-}
-void MYHZ12_12( unsigned char x, unsigned char y, char num[2])
-{
-	unsigned char x1,j,i=0 ;
-	x1=x/4; 
-	Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
-	Set_Row_Address(y,y+11); 
-	Set_Write_RAM();	 //	写显存
-	 while(1)
-	 {
-		if(1==MY_Compare(HZ12X12[i].Index,num))
+		k1=d&0xc0;     //当i=0时 为D7,D6位 当i=1时 为D5,D4位
+
+     /****有4种可能，16级灰度,一个字节数据表示两个像素，一个像素对应一个字节的4位***/
+		switch(k1)
 		{
-			for(j=0;j<24;j++)
-			{
-				Con_4_byte(HZ12X12[i].Msk[j]);
-			}
-			break;
-		}
-		i++;
-	}
-}
-void Show_MYHZ12_12(unsigned char  x,unsigned char  y, unsigned char  d,char num[])
-{
-  unsigned char  i,d1,cnt,j=0;
-	char str[2]={0};
-  d1=d+16;
-	cnt=strlen(num);
-  for(i=0;i<cnt/2;i++)
-  {
-		sprintf(str,"%c%c",num[j],num[j+1]);
-		MYHZ12_12(x,y,str);
-		x=x+d1;
-		j+=2;		
-  }
-}
+			case 0x00:d1_4byte[i]=0x00;// 0000,0000   
+				break;
+			case 0x40:d1_4byte[i]=0x0f;// 0100,0000	   
+				break;	
+			case 0x80:d1_4byte[i]=0xf0;//1000,0000	   
+				break;
+			case 0xc0:d1_4byte[i]=0xff;//1100,0000	  
+				break;	 
+			default:
+				break;
+		} 
+		d=d<<2;
+		k2=d&0xc0;     //当i=0时 为D7,D6位 当i=1时 为D5,D4位
 
-void MYHZ16_16( unsigned char x, unsigned char y, char num[2])
-{
-	unsigned char x1,j,i=0 ;
-	x1=x/4; 
-	Set_Column_Address(Shift+x1,Shift+x1+5); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
-	Set_Row_Address(y,y+23); 
-	Set_Write_RAM();	 //	写显存
-	 while(1)
-	 {
-		if(1==MY_Compare(HZ12X12[i].Index,num))
+     /****有4种可能，16级灰度,一个字节数据表示两个像素，一个像素对应一个字节的4位***/
+		switch(k2)
 		{
-			for(j=0;j<24;j++)
-			{
-				Con_4_byte(HZ12X12[i].Msk[j]);//此处要修改
-			}
-			break;
-		}
-		i++;
-	}
-}
-void Show_MYHZ16_16(unsigned char  x,unsigned char  y, unsigned char  d,char num[])
-{
-  unsigned char  i,d1,cnt,j=0;
-	char str[2]={0};
-  d1=d+16;
-	cnt=strlen(num);
-  for(i=0;i<cnt/2;i++)
-  {
-		sprintf(str,"%c%c",num[j],num[j+1]);//此处要修改
-		MYHZ12_12(x,y,str);
-		x=x+d1;
-		j+=2;		
-  }
-}
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//****************************************************
-//   写入一串12*12汉字 www.lcdsoc.com	x坐标和字间距d要为4的倍数
-//    num1,num2：汉字在字库中的位置	 从num1显示到num2
-//    x: Start Column  开始列 范围 0~（255-16）
-//    y: Start Row    开始行 0~63
-//    d:字间距离 0为无间距 
-//*****************************************************
-void Show_HZ12_12(unsigned char  x,unsigned char  y, unsigned char  d,unsigned char num1,unsigned char num2)
-{
-  unsigned char  i,d1;
-  d1=d+16;
-  for(i=num1;i<num2+1;i++)
-  {
-  HZ12_12(x,y,i);
-  x=x+d1;             
-  }
-}
-
-
-/***************************************************************
-//  显示16*16点阵汉字 2015-05晶奥测试通过
-//  取模方式为：横向取模左高位,数据排列:从左到右从上到下    16列 16行 
-//   num：汉字在字库中的位置
-//   x: Start Column  开始列 范围 0~（256-16）
-//   y: Start Row   开始行 0~63 
-***************************************************************/
-void HZ16_16( unsigned char x, unsigned char y, unsigned char num)
-{
-	unsigned char x1,j ;
-	x1=x/4; 
-	Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
-	Set_Row_Address(y,y+15); 
-	Set_Write_RAM();	 //	写显存
-	 
-	for(j=0;j<32;j++)
-	{
-		 Con_4_byte(HZ16X16_S[num*32+j]);
-	}
-  
-		
-}	
-
-//****************************************************
-//   写入一串16*16汉字 www.lcdsoc.com
-//    num1,num2：汉字在字库中的位置	 从num1显示到num2
-//    x: Start Column  开始列 范围 0~（255-16）
-//    y: Start Row    开始行 0~63
-//    d:字间距离 0为无间距 
-//x坐标和字间距d要为4的倍数
-//*****************************************************
-void Show_HZ16_16(unsigned char  x,unsigned char  y, unsigned char  d,unsigned char num1,unsigned char num2)
-{
-  unsigned char  i,d1;
-  d1=d+16;
-  for(i=num1;i<num2+1;i++)
-  {
-  HZ16_16(x,y,i);
-  x=x+d1;             
-  }
-}
-
-/***************************************************************
-//  显示24*24点阵汉字 2015-05晶奥测试通过
-//  取模方式为：横向取模左高位,数据排列:从左到右从上到下    24列 24行 
-//   num：汉字在字库中的位置
-//   x: Start Column  开始列 范围 0~（255-16）
-//   y: Start Row   开始行 0~63 
-***************************************************************/
-void HZ24_24( unsigned char x, unsigned char y, unsigned char num)
-{
-	unsigned char x1,j ;
-	x1=x/4; 
-	Set_Column_Address(Shift+x1,Shift+x1+5); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
-	Set_Row_Address(y,y+23); 
-	Set_Write_RAM();	 //	写显存
-	 
-	for(j=0;j<72;j++)
-	{
-		 Con_4_byte(HZ24X24_S[num*72+j]);	//宋体24*24 ····如需要楷体24*24（HZ24X24_K.h） ,黑体24*24（HZ24X24_H.h）包含相应的头文件并修改此处数组名
-	}
- 		
-}	
-
-//****************************************************
-//   写入一串24*24汉字 www.lcdsoc.com
-//    num1,num2：汉字在字库中的位置	 从num1显示到num2
-//    x: Start Column  开始列 范围 0~（255-16）
-//    y: Start Row    开始行 0~63
-//    d:字间距离 0为无间距 
-//    x坐标和字间距d要为4的倍数
-//*****************************************************
-void Show_HZ24_24(unsigned char  x,unsigned char  y, unsigned char  d,unsigned char num1,unsigned char num2)
-{
-  unsigned char  i,d1;
-  d1=d+24;
-  for(i=num1;i<num2+1;i++)
-  {
-  HZ24_24(x,y,i);
-  x=x+d1;             
-  }
-}
-
-
- //==============================================================
-//功能描述：写入一组标准ASCII字符串	 5x8
-//参数：显示的位置（x,y），ch[]要显示的字符串
-//返回：无
-//==============================================================  
-void Asc5_8(unsigned char x,unsigned char y,unsigned char ch[])
-{
-  unsigned char x1,c=0, i=0,j=0;      
-  while (ch[i]!='\0')
-  {    
-    x1=x/4;
-	c =ch[i]-32;
-    if(x1>61)
-	   {x=0;
-	   x1=x/4;
-	   y=y+8;}  //换行																	
-    Set_Column_Address(Shift+x1,Shift+x1+1); // 设置列坐标，shift为列偏移量由1322决定 
-	Set_Row_Address(y,y+7); 
-	Set_Write_RAM();	 //	写显存    
-  	
-		for(j=0;j<8;j++)
-	 		  {
-				 Con_4_byte(ASC5X8[c*8+j]);	//数据转换
-			   }
-	 i++;
-	 x=x+8;	 //字间距，8为最小
-  }
-}
- //==============================================================
-//功能描述：写入一组标准ASCII字符串	 6x12
-//参数：显示的位置（x,y），ch[]要显示的字符串
-//返回：无
-//==============================================================  
-void Asc6_12(unsigned char x,unsigned char y,unsigned char ch[])
-{
-  unsigned char x1,c=0, i=0,j=0;      
-  while (ch[i]!='\0')
-  {    
-    x1=x/4;
-	c =ch[i]-32;
-    if(x1>61)
-	   {x=0;
-	   x1=x/4;
-	   y=y+12;}  //换行																	
-    Set_Column_Address(Shift+x1,Shift+x1+1); // 设置列坐标，shift为列偏移量由1322决定 
-	Set_Row_Address(y,y+11); 
-	Set_Write_RAM();	 //	写显存    
-  	
-		for(j=0;j<12;j++)
-	 		  {
-				 Con_4_byte(ASC6X12[c*12+j]);	//数据转换
-			   }
-	 i++;
-	 x=x+8;	 //字间距，8为最小
-  }
-}
-//==============================================================
-//功能描述：写入一组标准ASCII字符串	 8x16
-//参数：显示的位置（x,y），ch[]要显示的字符串
-//返回：无
-//==============================================================  
-void Asc8_16(unsigned char x,unsigned char y,unsigned char ch[])
-{
-  unsigned char x1,c=0, i=0,j=0;      
-  while (ch[i]!='\0')
-  {    
-    x1=x/4;
-	c =ch[i]-32;
-    if(x1>61)
-	   {x=0;
-	   x1=x/4;
-	   y=y+16;}  //换行																	
-    Set_Column_Address(Shift+x1,Shift+x1+1); // 设置列坐标，shift为列偏移量由1322决定 
-	Set_Row_Address(y,y+15); 
-	Set_Write_RAM();	 //	写显存    
-  	
-		for(j=0;j<16;j++)
-	 		  {
-				 Con_4_byte(ASC8X16[c*16+j]);	//数据转换
-			   }
-	 i++;
-	 x=x+8;	 //字间距，8为最小
-  }
+			case 0x00:d2_4byte[i]=0x00;//0000,0000
+				break;
+			case 0x40:d2_4byte[i]=0x0f;//0100,0000
+				break;	
+			case 0x80:d2_4byte[i]=0xf0;//1000,0000
+				break;
+			case 0xc0:d2_4byte[i]=0xff;//1100,0000
+				break;	 
+			default:
+				break;
+		}	  
+		d=d<<2;                                //左移两位    
+		OLED_WR_Byte(d1_4byte[i],OLED_DATA);	    //写前2列
+		OLED_WR_Byte(d2_4byte[i],OLED_DATA);       	//写后2列	  共计4列
+   }
 }
  
-//==============================================================
-//功能描述：写入一组标准ASCII字符串	 12x24
-//参数：显示的位置（x,y），ch[]要显示的字符串
-//返回：无
-//==============================================================  
-void Asc12_24(unsigned char x,unsigned char y,unsigned char ch[])
-{
-  unsigned char x1,c=0, i=0,j=0;      
-  while (ch[i]!='\0')
-  {    
-    x1=x/4;
-	c =ch[i]-32;
-    if(x1>59)
-	   {x=0;
-	   x1=x/4;
-	   y=y+24;}  //换行																	
-    Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定 
-	Set_Row_Address(y,y+23); 
-	Set_Write_RAM();	 //	写显存    
-  	
-		for(j=0;j<48;j++)
-	 		  {
-				 Con_4_byte(ASC12X24[c*48+j]);	//数据转换
-			   }
-	 i++;
-	 x=x+16;//字间距，12为最小	
-  }
-}
 
-//==============================================================
-//功能描述：写入一组标准ASCII字符串	 20x40	 256*64 只能显示一行
-//参数：显示的位置（x,y），ch[]要显示的字符串
-//返回：无
-//==============================================================  
-void Asc20_40(unsigned char x,unsigned char y,unsigned char ch[])
-{
-  unsigned char x1,c=0, i=0,j=0;      
-  while (ch[i]!='\0')
-  {    
-    x1=x/4;
-	c =ch[i]-32;
-   /* if(x1>10)
-	   {x=0;
-	   x1=x/4;
-	    }  //只能显示一行		*/														
-    Set_Column_Address(Shift+x1,Shift+x1+5); // 设置列坐标，shift为列偏移量由1322决定 
-	Set_Row_Address(y,y+39); 
-	Set_Write_RAM();	 //	写显存    
-  	
-		for(j=0;j<120;j++)
-	 		  {
-				 Con_4_byte(ASC20X40[c*120+j]);	//数据转换
-			   }
-	 i++;
-	 x=x+24;//字间距，20为最小	
-  }
-}
 
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-//  Show Gray Scale Bar (Full Screen)
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 void Grayscale()
 {
 	// Level 16 => Column 1~16
