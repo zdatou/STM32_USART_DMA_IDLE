@@ -104,16 +104,23 @@ void MYHZ16_16( unsigned char x, unsigned char y, char num[2]);
 void Show_MYHZ16_16(unsigned char  x,unsigned char  y, unsigned char  d,char num[]);
 
 
-void OLED_ShowString(u8 x,u8 y, u8 *p,u8 size, u8 gray);
+void OLED_ShowString(u8 x,u8 y, u8 *p,u8 size, u8 line, u8 gray);
 void OLED_ShowString_Line(u8 x,u8 y, u8 *p,u8 size, u8 gray);
 void OLED_ShowChar(unsigned char x,unsigned char y,unsigned char chr, u8 size, u8 mode, u8 gray);
 void OLED_Refresh_Gram(void);
 void OLED_DrawPoint(u8 x,u8 y,u8 t);
-void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray);
+void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 middle, u8 gray);
 void OLED_Clear(void);
 void OLED_ShowNum(u8 x,u8 y,u32 num,u8 len,u8 size, u8 gray);
 void OLED_Fill(u8 x1,u8 y1,u8 x2,u8 y2,u8 dot);
 void OLED_ShowText_Middle(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray);
+void Show_Font(u16 x,u16 y,u8 *font,u8 size,u8 mode, u8 gray);
+void OLED_ShowFloat(u8 x, u8 y, float num, u8 len, u8 size, u8 pos);
+
+u32 mypow(u8 m,u8 n);
+void OLED_DrawLine(u16 x1, u16 y1, u16 x2, u16 y2);
+void OLED_DrawRectangle(u16 x1, u16 y1, u16 x2, u16 y2);
+void LCD_Draw_Circle(u16 x0,u16 y0,u8 r);
 #endif  
 	 
 

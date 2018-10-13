@@ -40,6 +40,10 @@ typedef struct{
 	u16 ps;
 }timeshow_t;
 
+typedef struct{
+	u8 _int;
+	u8 _deci;
+}tri_t;
 
 
 void DisDemo(uint8_t Key_Value);//—°‘ÒΩÁ√Ê
@@ -48,5 +52,9 @@ void Demo_OpMenu2(void);
 void Demo_OpMenu3(void);
 void Demo_OpMenu4(void);
 void Demo_DataShow(void);
+void Demo_TriSet(void);
+void Demo_E_I_Set(void);
+void Demo_RefChannel(void);
+float Value_Opt(float value,u8 opt,u8 addorsub);
 #endif
 

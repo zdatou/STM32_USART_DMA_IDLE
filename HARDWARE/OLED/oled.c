@@ -50,7 +50,7 @@ void OLED_Clear(void)
 	u16 i,n;  
 	for(i=0;i<32;i++)for(n=0;n<64;n++)OLED_GRAM[n][i]=0X00;  
 	//OLED_Refresh_Gram();//更新显示
-	Fill_RAM(0);
+	//Fill_RAM(0);
 }
 
 void OLED_DrawPoint(u8 x,u8 y,u8 t)
@@ -179,15 +179,7 @@ void Show_Font(u16 x,u16 y,u8 *font,u8 size,u8 mode, u8 gray)
 }
 
 
-
-//在指定位置开始显示一个字符串	    
-//支持自动换行
-//(x,y):起始坐标
-//width,height:区域
-//str  :字符串
-//size :字体大小
-//mode:0,反白显示 1,正常显示    	
-void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
+void _OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
 {
 	u16 x0 = x;
 	u8 bHz = 0;
@@ -211,15 +203,12 @@ void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
 				if(y > (64-size))break;
 				if(*str == '\n')
 				{
-					y += size;
-					x = x0;
 					str++;
+					y+=size;
+					x = x0;
 					continue;
 				}
-				else
-				{
-					OLED_ShowChar(x, y, *str, size, mode, gray);
-				}
+				OLED_ShowChar(x, y, *str, size, mode, gray);
 				str++;
 				x += temp;
 			}
@@ -239,18 +228,22 @@ void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
 		}
 	}
 }
-
-void OLED_ShowText_Middle(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
+//在指定位置开始显示一个字符串	    
+//支持自动换行
+//(x,y):起始坐标
+//width,height:区域
+//str  :字符串
+//size :字体大小
+//mode:0,反白显示 1,正常显示   
+//middle: 0不居中 1居中
+//gray: 灰度值 暂时未用到
+void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 middle, u8 gray)
 {
-	u16 x0 = x;
-	u8 bHz = 0;
 	u8 t2 = 0;
-	u8 temp = 0;
 	u16 width = 0;
-	u8 *ptemp = str;
-	
-	if(size == 8)temp = 5;
-	else temp = size/2;
+	u8 buf[24];
+	u8 *ptemp;
+	u8 cnt = 0;
 	
 	
 	switch(size) //根据字体大小得到字体数组以及改字体每个字对应的字节数, t2为该字体每个字占屏幕多少列
@@ -262,66 +255,53 @@ void OLED_ShowText_Middle(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
 		case 40:t2 = 24;break;
 		default:return;
 	}
-	
-	while(*ptemp != 0)
+
+	if(!middle)
 	{
-		if(*ptemp > 0x80)
+		_OLED_ShowText(x, y, str, size, mode, gray);
+		return;
+	}
+	
+	while(1)
+	{
+		if(*str >= 0x80)
 		{
-			width += size;
-			ptemp+=2;
+			buf[cnt++] = *str;
+			buf[cnt++] = *(str+1);
+			str+=2;
+		}
+		else if((*str != '\n') && (*str != '\0'))
+		{
+			buf[cnt++] = *str;
+			str++;
 		}
 		else
-		{
-			width += t2;
-			ptemp++;
-		}
-	}
-	if(width < 256)
-	{
-		x = (256-width)/2;
-		x0 = x;
-	}
-	
-	while(*str != 0)
-	{
-		if(!bHz)
-		{
-			if(*str > 0x80)bHz = 1; //中文
-			else
+		{		
+			ptemp = buf;
+			buf[cnt] = '\0';
+			width = 0;
+			cnt = 0;
+			while(*ptemp != 0)
 			{
-				if(x > (256-size/2))
+				if(*ptemp > 0x80)
 				{
-					y += size;
-					x = x0;
-				}
-				if(y > (64-size))break;
-				if(*str == '\n')
-				{
-					y += size;
-					x = x0;
-					str++;
-					continue;
+					width += size;
+					ptemp+=2;
 				}
 				else
 				{
-					OLED_ShowChar(x, y, *str, size, mode, gray);
+					width += t2;
+					ptemp++;
 				}
-				str++;
-				x += temp;
 			}
-		}
-		else
-		{
-			bHz = 0;
-			if(x > (256 - size))
+			if(width < 256)
 			{
-				y += size;
-				x = x0;
+				x = (256-width)/2;
 			}
-			if(y > (64 -size))break;
-			Show_Font(x, y, str, size, mode, gray);
-			str += 2;
-			x += size;
+			_OLED_ShowText(x, y, buf, size, mode, gray);
+			y += (size + 5);
+			if(*str == '\0')break;
+			str++;
 		}
 	}
 }
@@ -372,51 +352,241 @@ void OLED_ShowNum(u8 x,u8 y,u32 num,u8 len,u8 size, u8 gray)
 	 	OLED_ShowChar(x+(size/2)*t,y,temp+'0',size,1, gray); 
 	}
 } 
+//显示1个浮点数
+//x,y :起点坐标	 
+//len :小数的位数
+//size:字体大小
+//pos:需要反白的位 从小数位最低为数起
+//num:数值;	
+void OLED_ShowFloat(u8 x, u8 y, float num, u8 len, u8 size, u8 pos)
+{
+	u8 i = 0;
+	char buf[15];
+	
+	sprintf(buf, "%%.%df", len);
+	sprintf(buf, buf, num);
+	
+	for(i=0; buf[i]!='\0'; i++)//判断是不是非法字符!
+	{       
+		if(x>(256-(size/2))){x=0;y+=size;}
+		if(y>(64-size)){y=x=0;OLED_Clear();}
+		if((buf[i]<='~')&&(buf[i]>=' '))
+		{
+			if(pos==i)
+			{
+				OLED_ShowChar(x,y,buf[i],size,0, 0xff);
+			}
+			else		
+			{
+				OLED_ShowChar(x,y,buf[i],size,1, 0xff);	
+			}	
+		}			
+		x+=size/2;
+	} 
+	
+	
+//	u8 temp=0;
+//	u8 str[15] = {0};
+//	u8 i = 0;
+//	u32 integer = 0;
+//	u32 decimal = 0;
+//	
+//	if(!len) return;
+//	
+//	integer = (u32)num;
+//	decimal = (u32)((num-integer)*100000);
+//	
+//	for(i = 0; i < 15; i++)
+//	{
+//		if(decimal != 0 || (i == 0))  //增加一个i=0的条件 可以防止要显示的数据小数部分为0时显示异常
+//		{
+//			temp = decimal % 10 + '0';
+//			str[15-i-1] = temp;
+//			decimal /= 10;
+//			if(decimal == 0)  //小数处理完毕后添加小数点
+//			{
+//				i++;
+//				str[15-i-1] = '.';
+//				if(integer == 0)
+//				{
+//					i++;
+//					str[15-i-1] = '0'; //防止整数部分为0时显示异常
+//					i++;
+//					break;
+//				}
+//			}
+//		}
+//		else if(integer != 0)
+//		{
+//			temp = integer % 10 + '0';
+//			str[15-i-1] = temp;
+//			integer /= 10;
+//		}
+//		else
+//		{
+//			break;
+//		}
+//	}
+
+//	temp = 15 - i;
+//	for(i=0;i<len+1;i++)//判断是不是非法字符!
+//	{       
+//		if(x>(256-(size/2))){x=0;y+=size;}
+//		if(y>(64-size)){y=x=0;OLED_Clear();}
+//		if((str[i+temp]<='~')&&(str[i+temp]>=' '))
+//		{
+//			if(pos==i)
+//			{
+//				OLED_ShowChar(x,y,str[i+temp],size,0, 0xff);
+//			}
+//			else		
+//			{
+//				OLED_ShowChar(x,y,str[i+temp],size,1, 0xff);	
+//			}	
+//		}			
+//		x+=size/2;
+//	} 
+}
 
 //显示字符串
 //x,y:起点坐标  
 //size:字体大小 
 //*p:字符串起始地址 
 //gray:灰度值
-void OLED_ShowString(u8 x,u8 y, u8 *p,u8 size, u8 gray)
+//line: 1上划线 2下划线 0无
+void OLED_ShowString(u8 x,u8 y, u8 *p,u8 size, u8 line, u8 gray)
 {
 	u8 temp = 0;
 	if(size == 8)temp = 5;
 	else temp = size/2;
 		
-	while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
-    {       
-        if(x>(256-(size/2))){x=0;y+=size;}
-        if(y>(64-size)){y=x=0;OLED_Clear();}
-        OLED_ShowChar(x,y,*p,size, 1, gray);			
-        x+=temp;
-        p++;
-    } 
-}
+	if(line == 1)
+	{
+		while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
+		{       
+			if(x>(256-(size/2))){x=0;y+=size;}
+			if(y>(64-size)){y=x=0;OLED_Clear();}
+			OLED_ShowChar(x,y,*p,size, 1, gray);	
 
-void OLED_ShowString_Line(u8 x,u8 y, u8 *p,u8 size, u8 gray)
-{
-	u8 temp = 0;
-	if(size == 8)temp = 5;
-	else temp = size/2;
-		
-	while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
-    {       
-        if(x>(256-(size/2))){x=0;y+=size;}
-        if(y>(64-size)){y=x=0;OLED_Clear();}
-        OLED_ShowChar(x,y,*p,size, 1, gray);	
-
-		if((*p!=' ') || (*(p+1) != ' ' && *(p+1)!=0))
-		{
-			for(u8 i = 0; i < 8; i++)
+			if((*p!=' ') || (*(p+1) != ' ' && *(p+1)!=0))
 			{
-				OLED_DrawPoint(x+i, y, 1);
+				for(u8 i = 0; i < 8; i++)
+				{
+					OLED_DrawPoint(x+i, y, 1);
+				}
 			}
-		}
-        x+=temp;
-        p++;
-    } 
+			x+=temp;
+			p++;
+		} 
+	}
+	else if(line == 2)
+	{
+//		while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
+//		{       
+//			if(x>(256-(size/2))){x=0;y+=size;}
+//			if(y>(64-size)){y=x=0;OLED_Clear();}
+//			OLED_ShowChar(x,y,*p,size, 1, gray);	
+
+//			if((*p!=' ') || (*(p+1) != ' ' && *(p+1)!=0))
+//			{
+//				for(u8 i = 0; i < 8; i++)
+//				{
+//					OLED_DrawPoint(x+i, y, 1);
+//				}
+//			}
+//			x+=temp;
+//			p++;
+//		} 
+	}
+	else
+	{
+		while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
+		{       
+			if(x>(256-(size/2))){x=0;y+=size;}
+			if(y>(64-size)){y=x=0;OLED_Clear();}
+			OLED_ShowChar(x,y,*p,size, 1, gray);			
+			x+=temp;
+			p++;
+		} 
+	}
 }
+//画线
+//x1,y1:起点坐标
+//x2,y2:终点坐标  
+void OLED_DrawLine(u16 x1, u16 y1, u16 x2, u16 y2)
+{
+	u16 t; 
+	int xerr=0,yerr=0,delta_x,delta_y,distance; 
+	int incx,incy,uRow,uCol; 
+	delta_x=x2-x1; //计算坐标增量 
+	delta_y=y2-y1; 
+	uRow=x1; 
+	uCol=y1; 
+	if(delta_x>0)incx=1; //设置单步方向 
+	else if(delta_x==0)incx=0;//垂直线 
+	else {incx=-1;delta_x=-delta_x;} 
+	if(delta_y>0)incy=1; 
+	else if(delta_y==0)incy=0;//水平线 
+	else{incy=-1;delta_y=-delta_y;} 
+	if( delta_x>delta_y)distance=delta_x; //选取基本增量坐标轴 
+	else distance=delta_y; 
+	for(t=0;t<=distance+1;t++ )//画线输出 
+	{  
+		OLED_DrawPoint(uRow,uCol, 1);//画点 
+		xerr+=delta_x ; 
+		yerr+=delta_y ; 
+		if(xerr>distance) 
+		{ 
+			xerr-=distance; 
+			uRow+=incx; 
+		} 
+		if(yerr>distance) 
+		{ 
+			yerr-=distance; 
+			uCol+=incy; 
+		} 
+	}  
+} 
+
+//画矩形	  
+//(x1,y1),(x2,y2):矩形的对角坐标
+void OLED_DrawRectangle(u16 x1, u16 y1, u16 x2, u16 y2)
+{
+	OLED_DrawLine(x1,y1,x2,y1);
+	OLED_DrawLine(x1,y1,x1,y2);
+	OLED_DrawLine(x1,y2,x2,y2);
+	OLED_DrawLine(x2,y1,x2,y2);
+}
+
+//在指定位置画一个指定大小的圆
+//(x,y):中心点
+//r    :半径
+void LCD_Draw_Circle(u16 x0,u16 y0,u8 r)
+{
+	int a,b;
+	int di;
+	a=0;b=r;	  
+	di=3-(r<<1);             //判断下个点位置的标志
+	while(a<=b)
+	{
+		OLED_DrawPoint(x0+a,y0-b, 1);             //5
+ 		OLED_DrawPoint(x0+b,y0-a, 1);             //0           
+		OLED_DrawPoint(x0+b,y0+a, 1);             //4               
+		OLED_DrawPoint(x0+a,y0+b, 1);             //6 
+		OLED_DrawPoint(x0-a,y0+b, 1);             //1       
+ 		OLED_DrawPoint(x0-b,y0+a, 1);             
+		OLED_DrawPoint(x0-a,y0-b, 1);             //2             
+  		OLED_DrawPoint(x0-b,y0-a, 1);             //7     	         
+		a++;
+		//使用Bresenham算法画圆     
+		if(di<0)di +=4*a+6;	  
+		else
+		{
+			di+=10+4*(a-b);   
+			b--;
+		} 						    
+	}
+} 
 
 //**********************************************************************//
 //**********************************************************************//
@@ -573,120 +743,8 @@ void Set_Read_RAM()
 }
 
 
- void Set_Remap_Format(unsigned char d)
-{
-	OLED_WR_Byte(0xA0,OLED_CMD);  			// Set Re-Map / Dual COM Line Mode
-	OLED_WR_Byte(d,OLED_DATA);  				//   Default => 0x40
-						//     Horizontal Address Increment
-						//     Column Address 0 Mapped to SEG0
-						//     Disable Nibble Remap
-						//     Scan from COM0 to COM[N-1]
-						//     Disable COM Split Odd Even
-    OLED_WR_Byte(0x11,OLED_DATA); 	 			//   Default => 0x01 (Disable Dual COM Mode)
-} 
-  void Set_Partial_Display(unsigned char a, unsigned char b, unsigned char c)
-{
-  	OLED_WR_Byte((0xA8|a),OLED_CMD);		// Default => 0x8F
-					
-	if(a == 0x00)
-	{
-	    OLED_WR_Byte(b,OLED_DATA); 
-		OLED_WR_Byte(c,OLED_DATA); 
-	 
-	}
-}
 
-void Set_Display_Offset(unsigned char d)
-{
-	OLED_WR_Byte(0xA2,OLED_CMD);
- 	OLED_WR_Byte(d,OLED_DATA);
- 
-}
 
-void Set_Start_Line(unsigned char d)
-{
-	OLED_WR_Byte(0xA1,OLED_CMD);	// Set Vertical Scroll by RAM
- 	OLED_WR_Byte(d,OLED_DATA);
- 
-}
-
-void Set_Master_Current(unsigned char d)
-{
-   OLED_WR_Byte(0xC7,OLED_CMD);	//  Master Contrast Current Control
- 	OLED_WR_Byte(d,OLED_DATA);
-
-}
-
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-//  Gray Scale Table Setting (Full Screen)
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-void Set_Gray_Scale_Table()
-{
-
-    OLED_WR_Byte(0xB8,OLED_CMD); //  	// Set Gray Scale Table 
-	OLED_WR_Byte(0x0C,OLED_DATA); //
-	OLED_WR_Byte(0x18,OLED_DATA); //
-	OLED_WR_Byte(0x24,OLED_DATA); //
-	OLED_WR_Byte(0x30,OLED_DATA); //
-	OLED_WR_Byte(0x3C,OLED_DATA); //
-	OLED_WR_Byte(0x48,OLED_DATA); //
-	OLED_WR_Byte(0x54,OLED_DATA); //
-	OLED_WR_Byte(0x60,OLED_DATA); //
-	OLED_WR_Byte(0x6C,OLED_DATA); //
-	OLED_WR_Byte(0x78,OLED_DATA); //
-	OLED_WR_Byte(0x84,OLED_DATA); //
-	OLED_WR_Byte(0x90,OLED_DATA); //
-	OLED_WR_Byte(0x9C,OLED_DATA); //
-	OLED_WR_Byte(0xA8,OLED_DATA); //
-	OLED_WR_Byte(0xB4,OLED_DATA); //
- 	OLED_WR_Byte(0x00,OLED_CMD); 	// Enable Gray Scale Table
-
-}
-void Set_Linear_Gray_Scale_Table()
-{
-   	OLED_WR_Byte(0xB9,OLED_CMD); //	Set Default Linear Gray Scale Table
- 
-}
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-//  Vertical Scrolling (Full Screen)
-//
-//    a: Scrolling Direction
-//       "0x00" (Upward)		向上滚屏
-//       "0x01" (Downward)		向下滚屏
-//    b: Set Numbers of Row Scroll per Step	  每帧行数
-//    c: Set Time Interval between Each Scroll Step	每帧间延时
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-void Vertical_Scroll(unsigned char a, unsigned char b, unsigned char c)
-{
-unsigned char i,j;	
-
-	Set_Partial_Display(0x00,0x00,Max_Row);
-
-	switch(a)
-	{
-		case 0:
-			for(i=0;i<(Max_Row+1);i+=b)
-			{
-				Set_Display_Offset(i+1);
-				for(j=0;j<c;j++)
-				{
-					delay_us(200);
-				}
-			}
-			break;
-		case 1:
-			for(i=0;i<(Max_Row+1);i+=b)
-			{
-				Set_Display_Offset(Max_Row-i);
-				for(j=0;j<c;j++)
-				{
-					delay_us(200);
-				}
-			}
-			break;
-	}
-	Set_Partial_Display(0x01,0x00,0x00);
-}
   
 //-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 //  Show Regular Pattern (Full Screen)
@@ -710,328 +768,13 @@ unsigned char i,j;
 	}
 }
 
- //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-//  www.lcdsoc.com 201505
-//	  Data:取值为 0x11，0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff, ff最亮
-//    a: Line Width		线宽
-//    b: Column Address of Start 开始列
-//    c: Column Address of End	 结束列
-//    d: Row Address of Start	 开始行
-//    e: Row Address of End		 结束行
-//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-void Draw_Line(unsigned char Data, unsigned char a, unsigned char b, unsigned char c, unsigned char d, unsigned char e)
-{
-unsigned char i,j,k,l,b1,c1;
-	b1=b/4;
-	c1=c/4 ;
-	k=a%4;
-	if(k == 0)
-	{
-		l=(a/4)-1;
-	}
-	else
-	{
-		l=a/4;
-	}
 
-	Set_Column_Address(Shift+b1,Shift+c1);
-	Set_Row_Address(d,(d+a-1));
-	Set_Write_RAM();
-	for(i=0;i<(c1-b1+1);i++)
-	{
-		for(j=0;j<a;j++)
-		{
-			OLED_WR_Byte(Data,OLED_DATA);
-			OLED_WR_Byte(Data,OLED_DATA); 
-		}
-	}
-
-	Set_Column_Address(Shift+(c1-l),Shift+c1);
-	Set_Row_Address(d+a,e-a);
-	Set_Write_RAM();
-	for(i=0;i<(e-d);i++)//删掉一点
-	{
-		for(j=0;j<(l+1);j++)
-		{
-			if(j == 0)
-			{
-				switch(k)
-				{
-					case 0:
-						OLED_WR_Byte(Data,OLED_DATA);
-						OLED_WR_Byte(Data,OLED_DATA);
-						break;
-					case 1:
-						OLED_WR_Byte(0x00,OLED_DATA);
-						OLED_WR_Byte((Data&0x0F),OLED_DATA);
-						 
-						break;
-					case 2:
-					    OLED_WR_Byte(0x00,OLED_DATA);
-						OLED_WR_Byte(Data,OLED_DATA);
-					
-						break;
-					case 3:
-						OLED_WR_Byte((Data&0x0F),OLED_DATA);
-						OLED_WR_Byte(Data,OLED_DATA);
-						 
-						break;
-				}
-			}
-			else
-			{
-						OLED_WR_Byte(Data,OLED_DATA);
-		             	OLED_WR_Byte(Data,OLED_DATA); 
-			}
-		}
-	}
-   
-
-	Set_Column_Address(Shift+b1,Shift+c1);
-	Set_Row_Address((e-a+1),e);
-	Set_Write_RAM();
-	for(i=0;i<(c1-b1+1);i++)
-	{
-		for(j=0;j<a;j++)
-		{
-			OLED_WR_Byte(Data,OLED_DATA);
-			OLED_WR_Byte(Data,OLED_DATA); 
-		 
-		}
-	}
- 
-	Set_Column_Address(Shift+b1,Shift+(b1+l));
-	Set_Row_Address(d+a,e-a);
-	Set_Write_RAM();
-	for(i=0;i<(e-d);i++)//删掉一点
-	{
-		for(j=0;j<(l+1);j++)
-		{
-			if(j == l)
-			{
-				switch(k)
-				{
-					case 0:
-							OLED_WR_Byte(Data,OLED_DATA);
-		                 	OLED_WR_Byte(Data,OLED_DATA); 
-						break;
-					case 1:
-						
-						OLED_WR_Byte((Data&0xF0),OLED_DATA);
-						OLED_WR_Byte(0x00,OLED_DATA);
-						 
-						break;
-					case 2:
-						OLED_WR_Byte(Data,OLED_DATA);
-						 OLED_WR_Byte(0x00,OLED_DATA);
-					 
-						break;
-					case 3:
-						
-						OLED_WR_Byte(Data,OLED_DATA);
-						OLED_WR_Byte((Data&0xF0),OLED_DATA);
-				 
-						break;
-				}
-			}
-			else
-			{
-					OLED_WR_Byte(Data,OLED_DATA);
-		         	OLED_WR_Byte(Data,OLED_DATA); 
-			}
-		}
-	}
-}
  
 
 
- //=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-//  www.lcdsoc.com 201505
-//	  Data:取值为 0x11，0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff, ff最亮
-//    a: Line Width		线宽
-//    b: Column Address of Start 开始列
-//    c: Column Address of End	 结束列
-//    d: Row Address of Start	 开始行
-//    e: Row Address of End		 结束行
-//=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-void Draw_Rectangle(unsigned char Data, unsigned char a, unsigned char b, unsigned char c, unsigned char d, unsigned char e)
-{
-unsigned char i,j,k,l,b1,c1;
-	b1=b/4;
-	c1=c/4 ;
-	k=a%4;
-	if(k == 0)
-	{
-		l=(a/4)-1;
-	}
-	else
-	{
-		l=a/4;
-	}
 
-	Set_Column_Address(Shift+b1,Shift+c1);
-	Set_Row_Address(d,(d+a-1));
-	Set_Write_RAM();
-	for(i=0;i<(c1-b1+1);i++)
-	{
-		for(j=0;j<a;j++)
-		{
-			OLED_WR_Byte(Data,OLED_DATA);
-			OLED_WR_Byte(Data,OLED_DATA); 
-		}
-	}
 
-	Set_Column_Address(Shift+(c1-l),Shift+c1);
-	Set_Row_Address(d+a,e-a);
-	Set_Write_RAM();
-	for(i=0;i<(e-d+1);i++)
-	{
-		for(j=0;j<(l+1);j++)
-		{
-			if(j == 0)
-			{
-				switch(k)
-				{
-					case 0:
-						OLED_WR_Byte(Data,OLED_DATA);
-						OLED_WR_Byte(Data,OLED_DATA);
-						break;
-					case 1:
-						OLED_WR_Byte(0x00,OLED_DATA);
-						OLED_WR_Byte((Data&0x0F),OLED_DATA);
-						 
-						break;
-					case 2:
-					    OLED_WR_Byte(0x00,OLED_DATA);
-						OLED_WR_Byte(Data,OLED_DATA);
-					
-						break;
-					case 3:
-						OLED_WR_Byte((Data&0x0F),OLED_DATA);
-						OLED_WR_Byte(Data,OLED_DATA);
-						 
-						break;
-				}
-			}
-			else
-			{
-						OLED_WR_Byte(Data,OLED_DATA);
-		             	OLED_WR_Byte(Data,OLED_DATA); 
-			}
-		}
-	}
-   
 
-	Set_Column_Address(Shift+b1,Shift+c1);
-	Set_Row_Address((e-a+1),e);
-	Set_Write_RAM();
-	for(i=0;i<(c1-b1+1);i++)
-	{
-		for(j=0;j<a;j++)
-		{
-			OLED_WR_Byte(Data,OLED_DATA);
-			OLED_WR_Byte(Data,OLED_DATA); 
-		 
-		}
-	}
- 
-	Set_Column_Address(Shift+b1,Shift+(b1+l));
-	Set_Row_Address(d+a,e-a);
-	Set_Write_RAM();
-	for(i=0;i<(e-d+1);i++)
-	{
-		for(j=0;j<(l+1);j++)
-		{
-			if(j == l)
-			{
-				switch(k)
-				{
-					case 0:
-							OLED_WR_Byte(Data,OLED_DATA);
-		                 	OLED_WR_Byte(Data,OLED_DATA); 
-						break;
-					case 1:
-						
-						OLED_WR_Byte((Data&0xF0),OLED_DATA);
-						OLED_WR_Byte(0x00,OLED_DATA);
-						 
-						break;
-					case 2:
-						OLED_WR_Byte(Data,OLED_DATA);
-						 OLED_WR_Byte(0x00,OLED_DATA);
-					 
-						break;
-					case 3:
-						
-						OLED_WR_Byte(Data,OLED_DATA);
-						OLED_WR_Byte((Data&0xF0),OLED_DATA);
-				 
-						break;
-				}
-			}
-			else
-			{
-					OLED_WR_Byte(Data,OLED_DATA);
-		         	OLED_WR_Byte(Data,OLED_DATA); 
-			}
-		}
-	}
-}
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-//  Show Regular Pattern (Partial or Full Screen)
-//
-//    a: Column Address of Start
-//    b: Column Address of End (Total Columns Devided by 4)
-//    c: Row Address of Start
-//    d: Row Address of End
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-void Fill_Block(unsigned char Data, unsigned char a, unsigned char b, unsigned char c, unsigned char d)
-{
-unsigned char i,j;
-	
-	Set_Column_Address(Shift+a,Shift+b);
-	Set_Row_Address(c,d);
-	Set_Write_RAM();
-
-	for(i=0;i<(d-c+1);i++)
-	{
-		for(j=0;j<(b-a+1);j++)
-		{
-			OLED_WR_Byte(Data,OLED_DATA);
-		    OLED_WR_Byte(Data,OLED_DATA); 
-		}
-	}
-}
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-//  Show Pattern (Partial or Full Screen)
-//
-//    a: Column Address of Start
-//    b: Column Address of End (Total Columns Devided by 4)
-//    c: Row Address of Start
-//    d: Row Address of End
-// 灰度模式下显示一副图片
-//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-void Show_Pattern(unsigned char *Data_Pointer, unsigned char a, unsigned char b, unsigned char c, unsigned char d)
-{			 
-	unsigned char *Src_Pointer;
-	unsigned char i,j;
- 
-  //取模时候像素正序	（不能反序与2.7不同）
-    Src_Pointer=Data_Pointer;
-	Set_Column_Address(Shift+a,Shift+b);
-	Set_Row_Address(c,d);
-	Set_Write_RAM();
-  	for(i=0;i<(d-c+1);i++)
-	{
-		for(j=0;j<(b-a+1);j++)
-		{
-			OLED_WR_Byte(*Src_Pointer,OLED_DATA);
-			Src_Pointer++;
-			OLED_WR_Byte(*Src_Pointer,OLED_DATA);
-			Src_Pointer++;
-		}
-	}
- }
 
 /**************************************
   数据转换程序：将2位分成1个字节存入显存，由于1个seg表示4个列所以要同时写2个字节即4个像素
@@ -1087,131 +830,9 @@ inline void Con_4_byte(unsigned char DATA)
  
 
 
-void Grayscale()
-{
-	// Level 16 => Column 1~16
-		Fill_Block(0xFF,0x00,0x03,0x00,Max_Row);
-   	// Level 15 => Column 17~32
-		Fill_Block(0xEE,0x04,0x07,0x00,Max_Row);
-  	// Level 14 => Column 33~48
-		Fill_Block(0xDD,0x08,0x0B,0x00,Max_Row);
- 	// Level 13 => Column 49~64
-		Fill_Block(0xCC,0x0C,0x0F,0x00,Max_Row);
-  	// Level 12 => Column 65~80
-		Fill_Block(0xBB,0x10,0x13,0x00,Max_Row);
- 	// Level 11 => Column 81~96
-		Fill_Block(0xAA,0x14,0x17,0x00,Max_Row);
- 	// Level 10 => Column 97~112
-		Fill_Block(0x99,0x18,0x1B,0x00,Max_Row);
- 	// Level 9 => Column 113~128
-		Fill_Block(0x88,0x1C,0x1F,0x00,Max_Row);
- 	// Level 8 => Column 129~144
-		Fill_Block(0x77,0x20,0x23,0x00,Max_Row);
-  	// Level 7 => Column 145~160
-		Fill_Block(0x66,0x24,0x27,0x00,Max_Row);
-  	// Level 6 => Column 161~176
-		Fill_Block(0x55,0x28,0x2B,0x00,Max_Row);
- 	// Level 5 => Column 177~192
-		Fill_Block(0x44,0x2C,0x2F,0x00,Max_Row);
-  	// Level 4 => Column 193~208
-		Fill_Block(0x33,0x30,0x33,0x00,Max_Row);
-  	// Level 3 => Column 209~224
-		Fill_Block(0x22,0x34,0x37,0x00,Max_Row);
-   	// Level 2 => Column 225~240
-		Fill_Block(0x11,0x38,0x3B,0x00,Max_Row);
-		// Level 1 => Column 241~256
-		Fill_Block(0x00,0x3C,Max_Column,0x00,Max_Row);
-}
 
 
 
 
-
-//void HZ12_12( unsigned char x, unsigned char y, unsigned char num)
-//{
-//	unsigned char x1,j ;
-//	x1=x/4; 
-//	Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
-//	Set_Row_Address(y,y+11); 
-//	Set_Write_RAM();	 //	写显存
-//	 
-//	for(j=0;j<24;j++)
-//	{
-//		Con_4_byte(HZ12X12[num].Msk[j]);
-//	}
-//}
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//unsigned char MY_Compare(char str1[2],char str2[2])
-//{
-//	unsigned char i;
-//	for(i=0;i<2;i++)
-//	{
-//		if(str1[i]!=str2[i])
-//			break;
-//		else if(i==1)
-//			return 1;
-//	}
-//	if(i==0)
-//	return 0;
-//}
-//void MYHZ12_12( unsigned char x, unsigned char y, char num[2])
-//{
-//	unsigned char x1,j,i=0 ;
-//	x1=x/4; 
-//	Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
-//	Set_Row_Address(y,y+11); 
-//	Set_Write_RAM();	 //	写显存
-//	 while(1)
-//	 {
-//		if(1==MY_Compare(HZ12X12[i].Index,num))
-//		{
-//			for(j=0;j<24;j++)
-//			{
-//				Con_4_byte(HZ12X12[i].Msk[j]);
-//			}
-//			break;
-//		}
-//		i++;
-//	}
-//}
-//void Show_MYHZ12_12(unsigned char  x,unsigned char  y, unsigned char  d,char num[])
-//{
-//  unsigned char  i,d1,cnt,j=0;
-//	char str[2]={0};
-//  d1=d+16;
-//	cnt=strlen(num);
-//  for(i=0;i<cnt/2;i++)
-//  {
-//		sprintf(str,"%c%c",num[j],num[j+1]);
-//		MYHZ12_12(x,y,str);
-//		x=x+d1;
-//		j+=2;		
-//  }
-//}
-
-
-//void Asc8_16(unsigned char x,unsigned char y,unsigned char ch[])
-//{
-//  unsigned char x1,c=0, i=0,j=0;      
-//  while (ch[i]!='\0')
-//  {    
-//    x1=x/4;
-//	c =ch[i]-32;
-//    if(x1>61)
-//	   {x=0;
-//	   x1=x/4;
-//	   y=y+16;}  //换行																	
-//    Set_Column_Address(Shift+x1,Shift+x1+1); // 设置列坐标，shift为列偏移量由1322决定 
-//	Set_Row_Address(y,y+15); 
-//	Set_Write_RAM();	 //	写显存    
-//  	
-//		for(j=0;j<16;j++)
-//	 		  {
-//				 Con_4_byte(ASC8X16[c*16+j]);	//数据转换
-//			   }
-//	 i++;
-//	 x=x+8;	 //字间距，8为最小
-//  }
-//}
 
 
