@@ -2,23 +2,91 @@
 #include "task.h"
 
 TIM_HandleTypeDef TIM3_Handler;      //定时器句柄 
+TIM_HandleTypeDef TIM6_Handler;
+TIM_HandleTypeDef TIM7_Handler;
 
-//通用定时器3中断初始化
-//arr：自动重装值。
-//psc：时钟预分频数
-//定时器溢出时间计算方法:Tout=((arr+1)*(psc+1))/Ft us.
-//Ft=定时器工作频率,单位:Mhz
-//这里使用的是定时器3!
-void TIM3_Init(u16 arr,u16 psc)
-{  
-    TIM3_Handler.Instance=TIM3;                          //通用定时器3
-    TIM3_Handler.Init.Prescaler=psc;                     //分频系数
-    TIM3_Handler.Init.CounterMode=TIM_COUNTERMODE_UP;    //向上计数器
-    TIM3_Handler.Init.Period=arr;                        //自动装载值
-    TIM3_Handler.Init.ClockDivision=TIM_CLOCKDIVISION_DIV1;//时钟分频因子
-    HAL_TIM_Base_Init(&TIM3_Handler);
-    
-    HAL_TIM_Base_Start_IT(&TIM3_Handler); //使能定时器3和定时器3更新中断：TIM_IT_UPDATE   
+
+u32 tick_time_us = 0;
+
+void TIM_Init(u8 num, u16 arr, u16 psc)
+{
+	TIM_HandleTypeDef *htim;
+	if(1 == num)
+	{
+	}
+	else if(3 == num)
+	{
+		htim = &TIM3_Handler;
+		htim->Instance = TIM3;
+	}
+	else if(6 == num)
+	{
+		htim = &TIM6_Handler;
+		htim->Instance = TIM6;
+	}
+	else if(7 == num)
+	{
+		htim = &TIM7_Handler;
+		htim->Instance = TIM7;
+	}
+	htim->Init.Prescaler = psc;
+	htim->Init.Period    = arr;
+	htim->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim->Init.CounterMode = TIM_COUNTERMODE_UP;
+	HAL_TIM_Base_Init(htim);
+}
+
+void TIM_Base_Start(u8 num)
+{
+	switch(num)
+	{
+		case 3:
+			TIM3->CNT = 0;
+			HAL_TIM_Base_Start_IT(&TIM3_Handler);
+			break;
+		case 6:
+			TIM1->CNT = 0;
+			HAL_TIM_Base_Start_IT(&TIM6_Handler);
+			break;
+		case 7:
+			TIM1->CNT = 0;
+			HAL_TIM_Base_Start_IT(&TIM7_Handler);
+			break;
+		default:
+			break;
+	}
+}
+
+void TIM_Base_Stop(u8 num)
+{
+	switch(num)
+	{
+		case 3:
+			HAL_TIM_Base_Stop_IT(&TIM3_Handler);
+			break;
+		case 6:
+			HAL_TIM_Base_Stop_IT(&TIM6_Handler);
+			break;
+		case 7:
+			HAL_TIM_Base_Stop_IT(&TIM7_Handler);
+			break;
+		default:
+			break;
+	}
+}
+
+void Start_Tick(void)
+{
+	if(TIM7_Handler.Instance != TIM7) return;
+	tick_time_us = 0;
+	TIM_Base_Start(7);	
+}
+
+u32 Stop_Tick(void)
+{
+	if(TIM7_Handler.Instance != TIM7) return 0;
+	TIM_Base_Stop(7);
+	return tick_time_us + TIM7->CNT;
 }
 
 //定时器底册驱动，开启时钟，设置中断优先级
@@ -31,6 +99,18 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef *htim)
 		HAL_NVIC_SetPriority(TIM3_IRQn,1,3);    //设置中断优先级，抢占优先级1，子优先级3
 		HAL_NVIC_EnableIRQ(TIM3_IRQn);          //开启ITM3中断   
 	}
+	else if(htim->Instance == TIM6)
+	{
+		__HAL_RCC_TIM6_CLK_ENABLE();
+		HAL_NVIC_SetPriority(TIM6_IRQn, 2, 1);
+		HAL_NVIC_EnableIRQ(TIM6_IRQn);
+	}
+	else if(htim->Instance == TIM7)
+	{
+		__HAL_RCC_TIM7_CLK_ENABLE();
+		HAL_NVIC_SetPriority(TIM7_IRQn, 2, 1);
+		HAL_NVIC_EnableIRQ(TIM7_IRQn);
+	}
 }
 
 //定时器3中断服务函数
@@ -39,9 +119,31 @@ void TIM3_IRQHandler(void)
     HAL_TIM_IRQHandler(&TIM3_Handler);
 }
 
+void TIM6_IRQHandler(void)
+{
+	HAL_TIM_IRQHandler(&TIM6_Handler);
+}
+
+void TIM7_IRQHandler(void)
+{
+	HAL_TIM_IRQHandler(&TIM7_Handler);
+}
+
+
 //回调函数，定时器中断服务函数调用
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	HAL_IncTick();
-	TaskTick();
+	if(htim->Instance == TIM3)
+	{
+
+	}
+	else if(htim->Instance == TIM6)
+	{
+		HAL_IncTick();
+		TaskTick();
+	}
+	else if(htim->Instance == TIM7)
+	{
+		tick_time_us += 1000;
+	}
 }

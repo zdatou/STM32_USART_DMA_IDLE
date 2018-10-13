@@ -14,17 +14,6 @@
 //All rights reserved									  
 //////////////////////////////////////////////////////////////////////////////////
 
-
-typedef enum {
-	Key_S0 = 0x01, 
-	Key_S1 = 0x02,
-	Key_S2 = 0x03,
-	Key_S3 = 0x04,
-	Key_S4 = 0x05,
-	Key_S5 = 0X06
-} KeyFlagStatus; 
-
-
 typedef struct _ST_KEY_
 {
 	u16 Key_Flag;//°´¼ü±êÖ¾
@@ -35,19 +24,27 @@ typedef struct _ST_KEY_
 } St_Key;
 
 
-#define KEY0        1
-#define KEY1       1
-#define KEY2        1
-#define WK_UP      1
+#define KEY_UP        HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_15)
+#define KEY_DOWN      HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_14)
+#define KEY_RIGHT     HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_11)
+#define KEY_LEFT      HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_12)
+#define KEY_OK        HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_13)
+#define KEY_CANNCE    HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_10)
 
-#define KEY0_PRES 	1
-#define KEY1_PRES	2
-#define KEY2_PRES	3
-#define WKUP_PRES   4
+
+#define KEY_UP_PRES 	1
+#define KEY_DOWN_PRES	2
+#define KEY_RIGHT_PRES	3
+#define KEY_LEFT_PRES   4
+#define KEY_OK_PRES		5
+#define KEY_CANNCE_PRES 6
+
+#define BEEP(n) (n)?HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET):HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET)
 
 extern St_Key Key_Proc;
 
 void KEY_Init(void);
 u8 KEY_Scan(u8 mode);
 void KeyRead(void);
+void Beep(void);
 #endif

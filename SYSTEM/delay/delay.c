@@ -135,6 +135,7 @@ void delay_init(u8 SYSCLK)
 #endif
     HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK);//SysTick频率为HCLK
 	fac_us=SYSCLK;						//不论是否使用OS,fac_us都需要使用
+	SysTick->CTRL &= ~(SysTick_CTRL_TICKINT_Msk);//关闭SYSTICK中断
 #if SYSTEM_SUPPORT_OS 						//如果需要支持OS.
 	reload=SYSCLK;					    //每秒钟的计数次数 单位为K	   
 	reload*=1000000/delay_ostickspersec;	//根据delay_ostickspersec设定溢出时间

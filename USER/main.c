@@ -17,11 +17,14 @@ int main(void)
 	Stm32_Clock_Init(RCC_PLL_MUL9);   	//…Ë÷√ ±÷”,72M
 	delay_init(72);
 	LED_Init();
-	TIM3_Init(1000, 72);
+	KEY_Init();
+	TIM_Init(6, 1000, 72);
+	TIM_Init(7, 1000, 72);
+	TIM_Base_Start(6);
 	usart_init();
 	InitTask();
 	OLED_Init();
-	
+
 	while (1)
 	{
 		TaskRun();

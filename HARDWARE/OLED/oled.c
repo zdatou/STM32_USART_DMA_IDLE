@@ -190,7 +190,6 @@ void Show_Font(u16 x,u16 y,u8 *font,u8 size,u8 mode, u8 gray)
 void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
 {
 	u16 x0 = x;
-	u16 y0 = y;
 	u8 bHz = 0;
 	u8 temp = 0;
 	
@@ -240,6 +239,93 @@ void OLED_ShowText(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
 		}
 	}
 }
+
+void OLED_ShowText_Middle(u8 x,u8 y, u8 *str,u8 size, u8 mode, u8 gray)
+{
+	u16 x0 = x;
+	u8 bHz = 0;
+	u8 t2 = 0;
+	u8 temp = 0;
+	u16 width = 0;
+	u8 *ptemp = str;
+	
+	if(size == 8)temp = 5;
+	else temp = size/2;
+	
+	
+	switch(size) //根据字体大小得到字体数组以及改字体每个字对应的字节数, t2为该字体每个字占屏幕多少列
+	{
+		case 8:
+		case 12:
+		case 16:t2 = 8;break;
+		case 24:t2 = 16;break;
+		case 40:t2 = 24;break;
+		default:return;
+	}
+	
+	while(*ptemp != 0)
+	{
+		if(*ptemp > 0x80)
+		{
+			width += size;
+			ptemp+=2;
+		}
+		else
+		{
+			width += t2;
+			ptemp++;
+		}
+	}
+	if(width < 256)
+	{
+		x = (256-width)/2;
+		x0 = x;
+	}
+	
+	while(*str != 0)
+	{
+		if(!bHz)
+		{
+			if(*str > 0x80)bHz = 1; //中文
+			else
+			{
+				if(x > (256-size/2))
+				{
+					y += size;
+					x = x0;
+				}
+				if(y > (64-size))break;
+				if(*str == '\n')
+				{
+					y += size;
+					x = x0;
+					str++;
+					continue;
+				}
+				else
+				{
+					OLED_ShowChar(x, y, *str, size, mode, gray);
+				}
+				str++;
+				x += temp;
+			}
+		}
+		else
+		{
+			bHz = 0;
+			if(x > (256 - size))
+			{
+				y += size;
+				x = x0;
+			}
+			if(y > (64 -size))break;
+			Show_Font(x, y, str, size, mode, gray);
+			str += 2;
+			x += size;
+		}
+	}
+}
+
 
 //x1,y1,x2,y2 填充区域的对角坐标
 //确保x1<=x2;y1<=y2 0<=x1<=127 0<=y1<=63	 	 
@@ -303,6 +389,30 @@ void OLED_ShowString(u8 x,u8 y, u8 *p,u8 size, u8 gray)
         if(x>(256-(size/2))){x=0;y+=size;}
         if(y>(64-size)){y=x=0;OLED_Clear();}
         OLED_ShowChar(x,y,*p,size, 1, gray);			
+        x+=temp;
+        p++;
+    } 
+}
+
+void OLED_ShowString_Line(u8 x,u8 y, u8 *p,u8 size, u8 gray)
+{
+	u8 temp = 0;
+	if(size == 8)temp = 5;
+	else temp = size/2;
+		
+	while((*p<='~')&&(*p>=' '))//判断是不是非法字符!
+    {       
+        if(x>(256-(size/2))){x=0;y+=size;}
+        if(y>(64-size)){y=x=0;OLED_Clear();}
+        OLED_ShowChar(x,y,*p,size, 1, gray);	
+
+		if((*p!=' ') || (*(p+1) != ' ' && *(p+1)!=0))
+		{
+			for(u8 i = 0; i < 8; i++)
+			{
+				OLED_DrawPoint(x+i, y, 1);
+			}
+		}
         x+=temp;
         p++;
     } 
@@ -927,7 +1037,7 @@ void Show_Pattern(unsigned char *Data_Pointer, unsigned char a, unsigned char b,
   数据转换程序：将2位分成1个字节存入显存，由于1个seg表示4个列所以要同时写2个字节即4个像素
   uchar DATA：取模来的字模数据
 ****************************************/
-void Con_4_byte(unsigned char DATA)
+inline void Con_4_byte(unsigned char DATA)
 {
 	unsigned char d1_4byte[4],d2_4byte[4];
 	unsigned char i;
@@ -1017,9 +1127,91 @@ void Grayscale()
 
 
 
+//void HZ12_12( unsigned char x, unsigned char y, unsigned char num)
+//{
+//	unsigned char x1,j ;
+//	x1=x/4; 
+//	Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
+//	Set_Row_Address(y,y+11); 
+//	Set_Write_RAM();	 //	写显存
+//	 
+//	for(j=0;j<24;j++)
+//	{
+//		Con_4_byte(HZ12X12[num].Msk[j]);
+//	}
+//}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//unsigned char MY_Compare(char str1[2],char str2[2])
+//{
+//	unsigned char i;
+//	for(i=0;i<2;i++)
+//	{
+//		if(str1[i]!=str2[i])
+//			break;
+//		else if(i==1)
+//			return 1;
+//	}
+//	if(i==0)
+//	return 0;
+//}
+//void MYHZ12_12( unsigned char x, unsigned char y, char num[2])
+//{
+//	unsigned char x1,j,i=0 ;
+//	x1=x/4; 
+//	Set_Column_Address(Shift+x1,Shift+x1+3); // 设置列坐标，shift为列偏移量由1322决定。3为16/4-1
+//	Set_Row_Address(y,y+11); 
+//	Set_Write_RAM();	 //	写显存
+//	 while(1)
+//	 {
+//		if(1==MY_Compare(HZ12X12[i].Index,num))
+//		{
+//			for(j=0;j<24;j++)
+//			{
+//				Con_4_byte(HZ12X12[i].Msk[j]);
+//			}
+//			break;
+//		}
+//		i++;
+//	}
+//}
+//void Show_MYHZ12_12(unsigned char  x,unsigned char  y, unsigned char  d,char num[])
+//{
+//  unsigned char  i,d1,cnt,j=0;
+//	char str[2]={0};
+//  d1=d+16;
+//	cnt=strlen(num);
+//  for(i=0;i<cnt/2;i++)
+//  {
+//		sprintf(str,"%c%c",num[j],num[j+1]);
+//		MYHZ12_12(x,y,str);
+//		x=x+d1;
+//		j+=2;		
+//  }
+//}
 
 
-
-
+//void Asc8_16(unsigned char x,unsigned char y,unsigned char ch[])
+//{
+//  unsigned char x1,c=0, i=0,j=0;      
+//  while (ch[i]!='\0')
+//  {    
+//    x1=x/4;
+//	c =ch[i]-32;
+//    if(x1>61)
+//	   {x=0;
+//	   x1=x/4;
+//	   y=y+16;}  //换行																	
+//    Set_Column_Address(Shift+x1,Shift+x1+1); // 设置列坐标，shift为列偏移量由1322决定 
+//	Set_Row_Address(y,y+15); 
+//	Set_Write_RAM();	 //	写显存    
+//  	
+//		for(j=0;j<16;j++)
+//	 		  {
+//				 Con_4_byte(ASC8X16[c*16+j]);	//数据转换
+//			   }
+//	 i++;
+//	 x=x+8;	 //字间距，8为最小
+//  }
+//}
 
 

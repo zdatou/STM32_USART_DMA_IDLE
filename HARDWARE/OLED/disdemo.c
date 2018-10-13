@@ -7,30 +7,52 @@ void (*KeyFuncPtr)(void);            //定义按键功能指针
 void DisUpadte(void);
 __align(4) unsigned char dtbuf[50];
 
+u8 ChannelPageIndex = 1;
+u8 RefrenceChannel = 1;
+timeshow_t temp_time[8] = {
+	{1,2,3,4},
+	{5,6,7,8},
+	{1,2,3,4},
+	{5,6,7,8},
+	{1,2,3,4},
+	{5,6,7,8},
+	{1,2,3,4},
+	{5,6,7,8}
+};
 //状态表（数组+结构体）
-StatusTab KeyTab[MENU_SIZE];
+StatusTab KeyTab[MENU_SIZE] = {
+	{SelectMenu1, 			DataShowMenu, 			 SelectMenu1, 		SelectMenu2, 		SelectMenu1, 		SelectMenu1, 		SelectMenu1, Demo_OpMenu1},
+	{SelectMenu2, 			ChannelTrigSet, 		 SelectMenu1, 		SelectMenu3, 		SelectMenu2, 		SelectMenu2,		SelectMenu2, Demo_OpMenu2},
+	{SelectMenu3, 			RefrenceSet, 			 SelectMenu2, 		SelectMenu4, 		SelectMenu3, 		SelectMenu3,		SelectMenu3, Demo_OpMenu3},
+	{SelectMenu4, 			RefrenceChaneelSelect, 	 SelectMenu3, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, Demo_OpMenu4},
+	
+	{DataShowMenu,  		DataShowMenu, 	 		 DataShowMenu, 		DataShowMenu, 		DataShowMenu, 		DataShowMenu, 		SelectMenu1, Demo_DataShow},
+	{ChannelTrigSet,  		DataShowMenu, 	 		 SelectMenu3, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, Demo_OpMenu4},
+	{RefrenceSet,  			DataShowMenu, 	 		 SelectMenu3, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, Demo_OpMenu4},
+	{RefrenceChaneelSelect, DataShowMenu, 	 		 SelectMenu3, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, 		SelectMenu4, Demo_OpMenu4},
+};	
 
 void DisDemo(u8 Key_Value)
 {	
-	static uint8_t Key_pValue=0;
+	static uint8_t Key_pValue=100;
 	switch(Key_Value)
 	{
-		case  Key_S2:			  
+		case  KEY_OK_PRES:			  
 				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyOKStatus;  //确认按键
 				break; 
-		case  Key_S0:			 
+		case  KEY_UP_PRES:			 
 				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyUpStatus;	//向上按键s2
 				break; 
-	  case  Key_S1:		      
+	  case  KEY_DOWN_PRES:		      
 		    KeyFuncIndex=KeyTab[KeyFuncIndex].KeyDownStatus; //向下按键s3
 				break; 
-		case  Key_S3:		      
+		case  KEY_LEFT_PRES:		      
 		    KeyFuncIndex=KeyTab[KeyFuncIndex].KeyLeftStatus; //向左按键s3
 				break; 
-		case  Key_S4:		
+		case  KEY_RIGHT_PRES:		
 				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyRightStatus; //向右按键
 				break; 
-		case  Key_S5:		
+		case  KEY_CANNCE_PRES:		
 				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyBackStatus; //返回键
 				break; 
 		default : 
@@ -40,62 +62,62 @@ void DisDemo(u8 Key_Value)
 	if(Key_pValue != KeyFuncIndex)
 	{
 		Key_pValue = KeyFuncIndex;
-		Fill_RAM(0);//清屏
-//		BEEP = 0;
-		if(KeyFuncIndex == SetNetNightPage||KeyFuncIndex == SetNetTenPage||KeyFuncIndex == SetNetElevenPage||
-			 KeyFuncIndex == SetNetTwelvePage||KeyFuncIndex == SetNetThirteenPage||KeyFuncIndex == SetNetFourteenPage||
-			 KeyFuncIndex == SetNetFifteenPage||KeyFuncIndex == SetNetSixteenPage||
-		
-			KeyFuncIndex == OptNetOnePage||KeyFuncIndex == OptNetTwoPage||KeyFuncIndex == OptNetThrPage||
-		  KeyFuncIndex == OptNetFourPage||KeyFuncIndex == OptNetFivePage||KeyFuncIndex == OptNetSixPage||
-		  KeyFuncIndex == OptNetSevenPage||KeyFuncIndex == OptNetEightPage||
-		
-		  KeyFuncIndex == SetNetOnePage||KeyFuncIndex == SetNetTwoPage||KeyFuncIndex == SetNetThrPage||
-		  KeyFuncIndex == SetNetFourPage||KeyFuncIndex == SetNetFivePage||KeyFuncIndex == SetNetSixPage||
-		  KeyFuncIndex == SetNetSevenPage||KeyFuncIndex == SetNetEightPage||
-		
-			KeyFuncIndex == NetDetermine3 //取消手动设置页面返回页
-		
-		)//界面跳到设置IP界面时读取IP数值
-		{
-				switch(KeyFuncIndex)
-				{
-					default:break;
-				}
-				if(KeyFuncIndex == NetDetermine3)
-				{
-					//取消手动设置IP返回页，重新将自动设置的本地IP值赋予实际值
-				}
-		}
-		if(KeyFuncIndex == ShowTimeOne||KeyFuncIndex == ShowTimeTwo||KeyFuncIndex == ShowTimeThr||
-			 KeyFuncIndex == ShowTimeFour||KeyFuncIndex == ShowTimeFive||KeyFuncIndex == ShowTimeSix||
-			 KeyFuncIndex == ShowTimeSeven||KeyFuncIndex == ShowTimeEight)
-		{		
-		}
-							
+		OLED_Clear();
+		BEEP(0);	
+	    KeyFuncPtr=KeyTab[KeyFuncIndex].CurrentOperate;		//下面是执行按键的操作
+		(*KeyFuncPtr)();		
 	}
-			 KeyFuncPtr=KeyTab[KeyFuncIndex].CurrentOperate;		//下面是执行按键的操作
-//		if(KeyFuncPtr==Demo_NET9_IPshow||KeyFuncPtr==Demo_NET10_IPshow||KeyFuncPtr==Demo_NET11_IPshow||KeyFuncPtr==Demo_NET12_IPshow||
-//			 KeyFuncPtr==Demo_NET13_IPshow||KeyFuncPtr==Demo_NET14_IPshow||KeyFuncPtr==Demo_NET15_IPshow||KeyFuncPtr==Demo_NET16_IPshow
-//			)
-//			{
-//				cnt++;
-//				if(cnt>=4)
-//				{
-//					cnt=0;
-//					(*KeyFuncPtr)();     //执行当前的按键操作（页面显示）	
-//				}
-//			}
-//			else
-//			{
-//				(*KeyFuncPtr)();     //执行当前的按键操作（页面显示）	
-//			}
 }
 
+void Main_Show(void)
+{
+
+}
 
 void Demo_OpMenu1(void)
 {
+	OLED_ShowText_Middle(0, 0, (u8 *)"主菜单",           	12, 1, 0xff);
+	OLED_ShowText_Middle(0, 16, (u8 *)"测量数据",  			12, 0, 0xff);
+	OLED_ShowText_Middle(0, 32, (u8 *)"触发电平设置",		12, 1, 0xff);
+	OLED_ShowText_Middle(0, 48, (u8 *)"外部与内部参考设置", 12, 1, 0xff);
 }
 
+void Demo_OpMenu2(void)
+{
+	OLED_ShowText_Middle(0, 0, (u8 *)"主菜单",           	12, 1, 0xff);
+	OLED_ShowText_Middle(0, 16, (u8 *)"测量数据",  			12, 1, 0xff);
+	OLED_ShowText_Middle(0, 32, (u8 *)"触发电平设置",		12, 0, 0xff);
+	OLED_ShowText_Middle(0, 48, (u8 *)"外部与内部参考设置", 12, 1, 0xff);
+}
 
+void Demo_OpMenu3(void)
+{
+	OLED_ShowText_Middle(0, 0, (u8 *)"主菜单",           	12, 1, 0xff);
+	OLED_ShowText_Middle(0, 16, (u8 *)"测量数据",  			12, 1, 0xff);
+	OLED_ShowText_Middle(0, 32, (u8 *)"触发电平设置",		12, 1, 0xff);
+	OLED_ShowText_Middle(0, 48, (u8 *)"外部与内部参考设置", 12, 0, 0xff);
+}
+
+void Demo_OpMenu4(void)
+{
+	OLED_ShowText_Middle(0, 0, (u8 *)"主菜单",           	12, 1, 0xff);
+	OLED_ShowText_Middle(0, 16, (u8 *)"触发电平设置",  			12, 1, 0xff);
+	OLED_ShowText_Middle(0, 32, (u8 *)"外部与内部参考设置",		12, 1, 0xff);
+	OLED_ShowText_Middle(0, 48, (u8 *)"参考通道设置", 12, 1, 0xff);
+}
+
+void Demo_DataShow(void)
+{
+	u8 buf[48];	
+	u8 shiftx = 20;
+	u8 shifty = 6;
+	sprintf((char *)buf, "当前通道CH%1d                参考通道:CH%1d", ChannelPageIndex, RefrenceChannel);
+	OLED_ShowText(16,12, buf, 12, 1, 0xff);
+	sprintf((char *)buf, "0. %03d %03d %03d %03d",temp_time[ChannelPageIndex].ms, temp_time[ChannelPageIndex].us, temp_time[ChannelPageIndex].ns, temp_time[ChannelPageIndex].ps);
+	OLED_ShowString(32+shiftx, 24+shifty, buf, 16, 0xff);
+	OLED_ShowString_Line(52+shiftx, 38+shifty, " ms  us  ns  ps", 16, 0xff);
+	OLED_ShowString(20, 35, "<", 24, 0xff);
+	OLED_ShowString(220, 35, ">", 24, 0xff);
+
+}
 

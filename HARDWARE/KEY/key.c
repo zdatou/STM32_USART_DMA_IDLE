@@ -13,25 +13,24 @@
 //All rights reserved									  
 //////////////////////////////////////////////////////////////////////////////////
 St_Key Key_Proc;
+static u8 Beep_Flag = 0;
 //按键初始化函数
 void KEY_Init(void)
 {
     GPIO_InitTypeDef GPIO_Initure;
     
-    __HAL_RCC_GPIOA_CLK_ENABLE();           //开启GPIOA时钟
-    __HAL_RCC_GPIOC_CLK_ENABLE();           //开启GPIOC时钟
+    __HAL_RCC_GPIOD_CLK_ENABLE();            //开启GPIOD时钟
+	__HAL_RCC_GPIOE_CLK_ENABLE();            //开启GPIOE时钟
 
-    GPIO_Initure.Pin=GPIO_PIN_0;            //PA0
-    GPIO_Initure.Mode=GPIO_MODE_INPUT;      //输入
-    GPIO_Initure.Pull=GPIO_PULLDOWN;        //下拉
-    GPIO_Initure.Speed=GPIO_SPEED_FREQ_HIGH;     //高速
-    HAL_GPIO_Init(GPIOA,&GPIO_Initure);
-    
-    GPIO_Initure.Pin=GPIO_PIN_13;           //PC13
-    GPIO_Initure.Mode=GPIO_MODE_INPUT;      //输入
-    GPIO_Initure.Pull=GPIO_PULLUP;          //上拉
-    GPIO_Initure.Speed=GPIO_SPEED_FREQ_HIGH;     //高速
-    HAL_GPIO_Init(GPIOC,&GPIO_Initure);
+    GPIO_Initure.Pin=GPIO_PIN_15|GPIO_PIN_14|GPIO_PIN_13|GPIO_PIN_12|GPIO_PIN_11|GPIO_PIN_10;//PA0
+    GPIO_Initure.Mode=GPIO_MODE_INPUT;       //输入
+    GPIO_Initure.Pull=GPIO_PULLUP;         //上拉
+    GPIO_Initure.Speed=GPIO_SPEED_FREQ_HIGH; //高速
+    HAL_GPIO_Init(GPIOE,&GPIO_Initure);
+	
+	GPIO_Initure.Pin = GPIO_PIN_14;
+	GPIO_Initure.Mode = GPIO_MODE_OUTPUT_PP;
+	HAL_GPIO_Init(GPIOD, &GPIO_Initure);
 }
 
 //按键处理函数
@@ -44,23 +43,43 @@ u8 KEY_Scan(u8 mode)
 {
     static u8 key_up=1;     //按键松开标志
     if(mode==1)key_up=1;    //支持连按
-    if(key_up&&(KEY0==0||KEY1==0||KEY2==0||WK_UP==1))
+    if(key_up&&(KEY_UP==0||KEY_DOWN==0||KEY_RIGHT==0||KEY_LEFT==0||KEY_OK==0||KEY_CANNCE==0))
     {
         key_up=0;
-        if(KEY0==0)       return KEY0_PRES;
-        else if(KEY1==0)  return KEY1_PRES;
-        else if(KEY2==0)  return KEY2_PRES;
-        else if(WK_UP==1) return WKUP_PRES;          
-    }else if(KEY0==1&&KEY1==1&&KEY2==1&&WK_UP==0)key_up=1;
+        if(KEY_UP==0)       return KEY_UP_PRES;
+        else if(KEY_DOWN == 0)  return KEY_DOWN_PRES;
+        else if(KEY_RIGHT == 0)  return KEY_RIGHT_PRES;
+        else if(KEY_LEFT == 0) return KEY_LEFT_PRES;   
+		else if(KEY_OK == 0) return KEY_OK_PRES;
+		else if(KEY_CANNCE == 0) return KEY_CANNCE_PRES;
+    }else if(KEY_UP==1&&KEY_DOWN==1&&KEY_RIGHT==1&&KEY_LEFT==1&&KEY_OK==1&&KEY_CANNCE==1)key_up=1;
     return 0;   //无按键按下
 }
 
 void KeyRead(void)//20ms执行一次
 {
 	unsigned char ReadData;
-	ReadData= KEY_Scan(1)^0x00;//异或：相同为0，不同为1
+	ReadData= KEY_Scan(1);
 	Key_Proc.Key_Tri = ReadData&(ReadData^Key_Proc.Key_Cnt);//边沿检测（2次检测）
 	Key_Proc.Key_Cnt = ReadData;
+	if(Key_Proc.Key_Tri)
+	{
+		BEEP(1);
+		Beep_Flag = 1;
+	}
 }
 
-
+void Beep(void)
+{
+	static u8 beepvalue = 0;
+	if(Beep_Flag == 1)
+	{
+		beepvalue++;
+		if(beepvalue > 2)
+		{
+			beepvalue = 0;
+			Beep_Flag = 0;
+			BEEP(0);
+		}
+	}
+}

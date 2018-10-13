@@ -13,8 +13,11 @@
 //Copyright(C) 广州市星翼电子科技有限公司 2014-2024
 //All rights reserved									  
 ////////////////////////////////////////////////////////////////////////////////// 	
-extern TIM_HandleTypeDef TIM3_Handler;      //定时器句柄 
 
-void TIM3_Init(u16 arr,u16 psc);
+void TIM_Init(u8 num, u16 arr, u16 psc);
+void TIM_Base_Start(u8 num);
+void TIM_Base_Stop(u8 num);
+void Start_Tick(void);
+u32 Stop_Tick(void);
 #endif
 

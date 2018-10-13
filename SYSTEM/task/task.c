@@ -3,6 +3,8 @@
 #include "key.h"
 #include "usart.h"
 #include "oled.h"
+#include "timer.h"
+#include "disdemo.h"
 
 void *USART_Task(void *msg);
 void *LED_Task(void *msg);
@@ -16,9 +18,9 @@ u32 sys_time = 0;
 stTask TaskBuff[] = {
 	{0, 0, 500, 1,  USART_Task, NULL}, 
 	{0, 0, 500,  1,  LED_Task, NULL},
-	{0, 0, 220,  1,  OLED_Task, NULL},
+	{0, 0, 150,  1,  OLED_Task, NULL},
 	{0, 0, 20,   1,  KEY_Task, NULL},
-	{0, 0, 5000,   1,  RG_AD_Task, NULL},
+	{0, 0, 1000,   1,  RG_AD_Task, NULL},
 	{0, 0, 100,  1,  DHT11_Task, NULL},
 };
 
@@ -60,51 +62,26 @@ void *LED_Task(void *msg)
 	return NULL;
 }
 
-extern __align(4) u8 OLED_GRAM[64][32];
-extern unsigned char   ASC5X8[];
 void *DHT11_Task(void *msg)
-{
-	//Asc6_12(150,0 ,"6*12 ASCII") ;	   // 6*12µ„’ÛASCII¬Î
-//	u8 i = 0;
-//	for(i = 0; i < 8; i++)
-//	{
-//		OLED_GRAM[i][0] = ASC5X8[('h'-' ')*8+i];
-//	}
-//	
-//	for(i = 0; i < 8; i++)
-//	{
-//		OLED_GRAM[i][2] = ASC5X8[('e'-' ')*8+i];
-//	}
-	
-	//OLED_ShowString(0, 0, "hello", 8, 1);
-	//OLED_ShowString(0, 12, "hello", 12, 1);
-	//OLED_ShowString(0, 36, "hello", 16, 1);
-	//OLED_ShowString(100, 0, "hello", 24, 1);
-	//OLED_ShowString(100, 24, "hello", 40, 1);
-	OLED_ShowText(0, 0, "÷˜≤Àµ•", 12, 1, 0xff);
-//	OLED_DrawPoint(0, 0, 1);
-//	OLED_DrawPoint(1, 1, 1);
-//	OLED_DrawPoint(2, 2, 1);
-//	OLED_DrawPoint(3, 3, 1);
-//	OLED_DrawPoint(4, 4, 1);
-//	OLED_DrawPoint(5, 5, 1);
-	OLED_Refresh_Gram();
+{		
 	return NULL;
 }
 
 void *OLED_Task(void *msg)
 {
+	OLED_Refresh_Gram();
 	return NULL;
 }
-
+u16 cnt = 0;
 void *KEY_Task(void *msg)
 { 
+	KeyRead();
+	DisDemo(Key_Proc.Key_Tri);
+	Beep();
 	return NULL;
 }
-
 void *RG_AD_Task(void *msg)
 {
-	//OLED_Refresh_Gram();
 	return NULL;
 }
 
