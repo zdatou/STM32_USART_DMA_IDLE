@@ -55,6 +55,11 @@ void Demo_DataShow(void);
 void Demo_TriSet(void);
 void Demo_E_I_Set(void);
 void Demo_RefChannel(void);
+void Key_Handler(u8 key_value, u8 keyfuncIndex);
+void DataShowMenu_Key_Handler(u8 key_value);
+void ChannelTrigSet_Key_Handler(u8 key_value);
+void RefrenceSet_Key_Handler(u8 key_value);
+void RefrenceChaneelSelect_Key_Handler(u8 key_value);
 float Value_Opt(float value,u8 opt,u8 addorsub);
 #endif
 

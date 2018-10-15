@@ -71,74 +71,78 @@ void DisDemo(u8 Key_Value)
 		Key_pValue = KeyFuncIndex;
 		OLED_Clear();	
 	}
-	else if(KeyFuncIndex == DataShowMenu)
+	else 
 	{
-		switch(Key_Value)
-		{
-			case KEY_LEFT_PRES:
-				ChannelPageIndex--;
-				(ChannelPageIndex>7)?ChannelPageIndex = 7:0;
-				break;
-			case KEY_RIGHT_PRES:
-				ChannelPageIndex++;
-				(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
-				break;
-			default:
-				break;
-		}
+		Key_Handler(Key_Value, KeyFuncIndex);
 	}
-	else if(KeyFuncIndex == ChannelTrigSet)
-	{
-		switch(Key_Value)
-		{
-			case KEY_UP_PRES:
-				TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 1);				
-				break;
-			case KEY_DOWN_PRES:
-				TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 0);
-				break;
-			case KEY_LEFT_PRES:
-				opt_bit--; value_bit++;
-				break;
-			case KEY_RIGHT_PRES:
-				ChannelPageIndex++;
-				(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
-				break;
-			default:
-				break;
-		}
-		if(opt_bit == 1) opt_bit = 0;
-		else if(opt_bit > 10) opt_bit = 2;
-		if(value_bit > 1) value_bit = 0;
-	}
-	else if(KeyFuncIndex == RefrenceSet)
-	{
-		switch(Key_Value)
-		{
-			case KEY_LEFT_PRES:
-				EIFlag = 0;
-				break;
-			case KEY_RIGHT_PRES:
-				EIFlag = 1;
-				break;
-		}
-	}
-	else if(KeyFuncIndex == RefrenceChaneelSelect)
-	{
-		switch(Key_Value)
-		{
-			case KEY_LEFT_PRES:
-				RefrenceChannel--;
-				(RefrenceChannel>7)?RefrenceChannel = 7:0;
-				break;
-			case KEY_RIGHT_PRES:
-				RefrenceChannel++;
-				(RefrenceChannel>7)?RefrenceChannel = 0:0;
-				break;
-			default:
-				break;
-		}
-	}
+//	else if(KeyFuncIndex == DataShowMenu)
+//	{
+//		switch(Key_Value)
+//		{
+//			case KEY_LEFT_PRES:
+//				ChannelPageIndex--;
+//				(ChannelPageIndex>7)?ChannelPageIndex = 7:0;
+//				break;
+//			case KEY_RIGHT_PRES:
+//				ChannelPageIndex++;
+//				(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
+//				break;
+//			default:
+//				break;
+//		}
+//	}
+//	else if(KeyFuncIndex == ChannelTrigSet)
+//	{
+//		switch(Key_Value)
+//		{
+//			case KEY_UP_PRES:
+//				TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 1);				
+//				break;
+//			case KEY_DOWN_PRES:
+//				TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 0);
+//				break;
+//			case KEY_LEFT_PRES:
+//				opt_bit--; value_bit++;
+//				break;
+//			case KEY_RIGHT_PRES:
+//				ChannelPageIndex++;
+//				(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
+//				break;
+//			default:
+//				break;
+//		}
+//		if(opt_bit == 1) opt_bit = 0;
+//		else if(opt_bit > 10) opt_bit = 2;
+//		if(value_bit > 1) value_bit = 0;
+//	}
+//	else if(KeyFuncIndex == RefrenceSet)
+//	{
+//		switch(Key_Value)
+//		{
+//			case KEY_LEFT_PRES:
+//				EIFlag = 0;
+//				break;
+//			case KEY_RIGHT_PRES:
+//				EIFlag = 1;
+//				break;
+//		}
+//	}
+//	else if(KeyFuncIndex == RefrenceChaneelSelect)
+//	{
+//		switch(Key_Value)
+//		{
+//			case KEY_LEFT_PRES:
+//				RefrenceChannel--;
+//				(RefrenceChannel>7)?RefrenceChannel = 7:0;
+//				break;
+//			case KEY_RIGHT_PRES:
+//				RefrenceChannel++;
+//				(RefrenceChannel>7)?RefrenceChannel = 0:0;
+//				break;
+//			default:
+//				break;
+//		}
+//	}
 	KeyFuncPtr=KeyTab[KeyFuncIndex].CurrentOperate;		//下面是执行按键的操作
 	(*KeyFuncPtr)();	
 }
@@ -203,6 +207,97 @@ void Demo_RefChannel(void)
 	u8 buf[100];
 	sprintf((char *)buf, "。当前参考通道:\n\n           <        CH%1d        >", RefrenceChannel+1);
 	OLED_ShowText(0, 12, buf, 12, 1, 0, 0xff);
+}
+
+void Key_Handler(u8 key_value, u8 keyfuncIndex)
+{
+	switch(keyfuncIndex)
+	{
+		case DataShowMenu:
+			DataShowMenu_Key_Handler(key_value);
+			break;
+		case ChannelTrigSet:
+			ChannelTrigSet_Key_Handler(key_value);
+			break;
+		case RefrenceSet:
+			RefrenceSet_Key_Handler(key_value);
+			break;
+		case RefrenceChaneelSelect:
+			RefrenceChaneelSelect_Key_Handler(key_value);
+			break;
+	}
+}
+
+void DataShowMenu_Key_Handler(u8 key_value)
+{
+	switch(key_value)
+	{
+		case KEY_LEFT_PRES:
+			ChannelPageIndex--;
+			(ChannelPageIndex>7)?ChannelPageIndex = 7:0;
+			break;
+		case KEY_RIGHT_PRES:
+			ChannelPageIndex++;
+			(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
+			break;
+		default:
+			break;
+	}
+}
+
+void ChannelTrigSet_Key_Handler(u8 key_value)
+{
+	switch(key_value)
+	{
+		case KEY_UP_PRES:
+			TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 1);				
+			break;
+		case KEY_DOWN_PRES:
+			TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 0);
+			break;
+		case KEY_LEFT_PRES:
+			opt_bit--; value_bit++;
+			break;
+		case KEY_RIGHT_PRES:
+			ChannelPageIndex++;
+			(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
+			break;
+		default:
+			break;
+	}
+	if(opt_bit == 1) opt_bit = 0;
+	else if(opt_bit > 10) opt_bit = 2;
+	if(value_bit > 1) value_bit = 0;
+}
+
+void RefrenceSet_Key_Handler(u8 key_value)
+{
+	switch(key_value)
+	{
+		case KEY_LEFT_PRES:
+			EIFlag = 0;
+			break;
+		case KEY_RIGHT_PRES:
+			EIFlag = 1;
+			break;
+	}
+}
+
+void RefrenceChaneelSelect_Key_Handler(u8 key_value)
+{
+	switch(key_value)
+	{
+		case KEY_LEFT_PRES:
+			RefrenceChannel--;
+			(RefrenceChannel>7)?RefrenceChannel = 7:0;
+			break;
+		case KEY_RIGHT_PRES:
+			RefrenceChannel++;
+			(RefrenceChannel>7)?RefrenceChannel = 0:0;
+			break;
+		default:
+			break;
+	}
 }
 
 float Value_Opt(float value,u8 opt,u8 addorsub)
