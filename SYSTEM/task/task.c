@@ -5,6 +5,8 @@
 #include "oled.h"
 #include "timer.h"
 #include "disdemo.h"
+#include "ad5680.h"
+#include "ad5325.h"
 
 void *USART_Task(void *msg);
 void *LED_Task(void *msg);
@@ -63,25 +65,31 @@ void *LED_Task(void *msg)
 }
 
 void *DHT11_Task(void *msg)
-{		
+{
+	//u8 buf[24];
+	//u16 temp = AD5325_Read_By_Value(AD5325_CHA);
+	//sprintf((char *)buf, "dac=%d\r\n", 15);
+	//com_send_pstr(&usart2, buf);
 	return NULL;
 }
 
 void *OLED_Task(void *msg)
 {
-	OLED_Refresh_Gram();
+//	OLED_Refresh_Gram();
 	return NULL;
 }
 u16 cnt = 0;
 void *KEY_Task(void *msg)
 { 
-	KeyRead();
-	DisDemo(Key_Proc.Key_Tri);
-	Beep();
+//	KeyRead();
+//	DisDemo(Key_Proc.Key_Tri);
+//	Beep();
+//	AD5325_Set_By_Value(AD5325_CHD, 1500);
 	return NULL;
 }
 void *RG_AD_Task(void *msg)
 {
+	//AD5325_Clear();
 	return NULL;
 }
 

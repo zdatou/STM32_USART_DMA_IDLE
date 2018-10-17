@@ -6,6 +6,47 @@
 #include "task.h"
 #include "timer.h"
 #include "oled.h"
+#include "ad5680.h"
+#include "ad5325.h"
+#include "24cxx.h"
+
+
+
+long long value[8];
+
+long long reference_indexmean[8]={0};
+long long stopresultmean[8]={0};
+
+extern long long reference_index[8][4];
+extern long long stopresult[8][4];
+
+unsigned char distable[8][32];
+unsigned char distemp[32];
+
+unsigned char disset[2][30];
+
+u8 channel[8]={0};
+u8 channelcount=0;
+
+long long ct=0;
+u8 keyvalue = 0;
+u8 pset = 0;
+
+u32 counter_halfs=0;
+u8 oscclkerror=0;
+u8 refclkerror=0;
+u8 clksource = 1;
+u8 clksourcetemp = 1;
+extern u8 LED[2];
+u8 clkerrorflag = 0;
+u8 menuselect=0;
+u8 refchannel_temp=1;
+u8 senddata[200]="$XHTSXH0310020000000000000139";
+u8 extref_flag = 0;
+u8 noinput = 0;
+u8 times=0;
+u8 refchannel=1;
+
 
 void SystemClock_Config(void);
 void usart_init(void);
@@ -24,7 +65,8 @@ int main(void)
 	usart_init();
 	InitTask();
 	OLED_Init();
-
+	AD5325_Init();
+	AD5325_Test();
 	while (1)
 	{
 		TaskRun();

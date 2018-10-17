@@ -10,6 +10,7 @@ __align(4) unsigned char dtbuf[50];
 
 u8 ChannelPageIndex = 1;
 u8 RefrenceChannel = 1;
+u8 return_cnt = 0;
 char *EIBuff[] = {"内部", "外部"};
 u8 EIFlag = 1;
 u8 opt_bit = 2;	
@@ -34,9 +35,9 @@ StatusTab KeyTab[MENU_SIZE] = {
 	{SelectMenu4, 			RefrenceChaneelSelect, 	 	SelectMenu3, 		   SelectMenu4, 		  SelectMenu4, 			 SelectMenu4, 			SelectMenu4, Demo_OpMenu4},
 	
 	{DataShowMenu,  		DataShowMenu, 	 			DataShowMenu, 		   DataShowMenu, 		  DataShowMenu, 		 DataShowMenu, 			SelectMenu1, Demo_DataShow},
-	{ChannelTrigSet,  		ChannelTrigSet, 	 		ChannelTrigSet,        ChannelTrigSet,        ChannelTrigSet, 		 ChannelTrigSet, 		SelectMenu2, Demo_TriSet},
-	{RefrenceSet,  			RefrenceSet, 	 		 	RefrenceSet, 		   RefrenceSet, 		  RefrenceSet, 			 RefrenceSet, 			SelectMenu3, Demo_E_I_Set},
-	{RefrenceChaneelSelect, RefrenceChaneelSelect, 	 	RefrenceChaneelSelect, RefrenceChaneelSelect, RefrenceChaneelSelect, RefrenceChaneelSelect, SelectMenu4, Demo_RefChannel},
+	{ChannelTrigSet,  		DataShowMenu, 	 			ChannelTrigSet,        ChannelTrigSet,        ChannelTrigSet, 		 ChannelTrigSet, 		SelectMenu2, Demo_TriSet},
+	{RefrenceSet,  			DataShowMenu, 	 		 	RefrenceSet, 		   RefrenceSet, 		  RefrenceSet, 			 RefrenceSet, 			SelectMenu3, Demo_E_I_Set},
+	{RefrenceChaneelSelect, DataShowMenu, 	 			RefrenceChaneelSelect, RefrenceChaneelSelect, RefrenceChaneelSelect, RefrenceChaneelSelect, SelectMenu4, Demo_RefChannel},
 };	
 
 void DisDemo(u8 Key_Value)
@@ -45,25 +46,26 @@ void DisDemo(u8 Key_Value)
 	switch(Key_Value)
 	{
 		case  KEY_OK_PRES:			  
-				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyOKStatus;  //确认按键
-				break; 
+			KeyFuncIndex=KeyTab[KeyFuncIndex].KeyOKStatus; return_cnt = 0;  //确认按键
+			break; 
 		case  KEY_UP_PRES:			 
-				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyUpStatus;	//向上按键s2
-				break; 
+			KeyFuncIndex=KeyTab[KeyFuncIndex].KeyUpStatus; return_cnt = 0;	//向上按键s2
+			break; 
 	  case  KEY_DOWN_PRES:		      
-		    KeyFuncIndex=KeyTab[KeyFuncIndex].KeyDownStatus; //向下按键s3
-				break; 
+		    KeyFuncIndex=KeyTab[KeyFuncIndex].KeyDownStatus; return_cnt = 0; //向下按键s3
+			break; 
 		case  KEY_LEFT_PRES:		      
-		    KeyFuncIndex=KeyTab[KeyFuncIndex].KeyLeftStatus; //向左按键s3
-				break; 
+		    KeyFuncIndex=KeyTab[KeyFuncIndex].KeyLeftStatus; return_cnt = 0; //向左按键s3
+			break; 
 		case  KEY_RIGHT_PRES:		
-				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyRightStatus; //向右按键
-				break; 
+			KeyFuncIndex=KeyTab[KeyFuncIndex].KeyRightStatus; return_cnt = 0; //向右按键
+			break; 
 		case  KEY_CANNCE_PRES:		
-				KeyFuncIndex=KeyTab[KeyFuncIndex].KeyBackStatus; //返回键
-				break; 
-		default : 
-				break;
+			KeyFuncIndex=KeyTab[KeyFuncIndex].KeyBackStatus; return_cnt = 0; //返回键
+			break; 
+		default: 
+			return_cnt++;
+			break;
 				//此处添加按键错误代码
 	}
 	if((Key_pValue != KeyFuncIndex))
@@ -71,78 +73,17 @@ void DisDemo(u8 Key_Value)
 		Key_pValue = KeyFuncIndex;
 		OLED_Clear();	
 	}
+	else if((return_cnt > 200) && (KeyFuncIndex != DataShowMenu))
+	{
+		return_cnt = 0;
+		KeyFuncIndex = DataShowMenu;
+		Key_pValue = KeyFuncIndex;
+		OLED_Clear();
+	}
 	else 
 	{
 		Key_Handler(Key_Value, KeyFuncIndex);
 	}
-//	else if(KeyFuncIndex == DataShowMenu)
-//	{
-//		switch(Key_Value)
-//		{
-//			case KEY_LEFT_PRES:
-//				ChannelPageIndex--;
-//				(ChannelPageIndex>7)?ChannelPageIndex = 7:0;
-//				break;
-//			case KEY_RIGHT_PRES:
-//				ChannelPageIndex++;
-//				(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
-//				break;
-//			default:
-//				break;
-//		}
-//	}
-//	else if(KeyFuncIndex == ChannelTrigSet)
-//	{
-//		switch(Key_Value)
-//		{
-//			case KEY_UP_PRES:
-//				TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 1);				
-//				break;
-//			case KEY_DOWN_PRES:
-//				TriggleVolatage[ChannelPageIndex] = Value_Opt(TriggleVolatage[ChannelPageIndex], value_bit, 0);
-//				break;
-//			case KEY_LEFT_PRES:
-//				opt_bit--; value_bit++;
-//				break;
-//			case KEY_RIGHT_PRES:
-//				ChannelPageIndex++;
-//				(ChannelPageIndex>7)?ChannelPageIndex = 0:0;
-//				break;
-//			default:
-//				break;
-//		}
-//		if(opt_bit == 1) opt_bit = 0;
-//		else if(opt_bit > 10) opt_bit = 2;
-//		if(value_bit > 1) value_bit = 0;
-//	}
-//	else if(KeyFuncIndex == RefrenceSet)
-//	{
-//		switch(Key_Value)
-//		{
-//			case KEY_LEFT_PRES:
-//				EIFlag = 0;
-//				break;
-//			case KEY_RIGHT_PRES:
-//				EIFlag = 1;
-//				break;
-//		}
-//	}
-//	else if(KeyFuncIndex == RefrenceChaneelSelect)
-//	{
-//		switch(Key_Value)
-//		{
-//			case KEY_LEFT_PRES:
-//				RefrenceChannel--;
-//				(RefrenceChannel>7)?RefrenceChannel = 7:0;
-//				break;
-//			case KEY_RIGHT_PRES:
-//				RefrenceChannel++;
-//				(RefrenceChannel>7)?RefrenceChannel = 0:0;
-//				break;
-//			default:
-//				break;
-//		}
-//	}
 	KeyFuncPtr=KeyTab[KeyFuncIndex].CurrentOperate;		//下面是执行按键的操作
 	(*KeyFuncPtr)();	
 }

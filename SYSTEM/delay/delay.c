@@ -222,7 +222,13 @@ void delay_ms(u16 nms)
 }
 #endif
 
+void delay_ns(u16 time)
+{     
+   while(time--) 
+   { 
 
+   } 
+}
 
 
 

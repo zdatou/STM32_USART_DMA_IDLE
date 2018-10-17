@@ -335,7 +335,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F107xC</Define>
               <Undefine></Undefine>
-              <IncludePath>..\CORE\Include;..\OBJ;..\USER;..\HALLIB\STM32F1xx_HAL_Driver\Inc;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\HARDWARE\LED;..\HARDWARE\KEY;..\SYSTEM\task;..\HARDWARE\TIMER;..\HARDWARE\OLED</IncludePath>
+              <IncludePath>..\CORE\Include;..\OBJ;..\USER;..\HALLIB\STM32F1xx_HAL_Driver\Inc;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\HARDWARE\LED;..\HARDWARE\KEY;..\SYSTEM\task;..\HARDWARE\TIMER;..\HARDWARE\OLED;..\HARDWARE\AD5680;..\HARDWARE\AD5325;..\HARDWARE\24CXX;..\HARDWARE\IIC;..\HARDWARE\TDCGPX2;..\HARDWARE\SPI</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -583,6 +583,36 @@
               <FileName>fastshow.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\OLED\fastshow.c</FilePath>
+            </File>
+            <File>
+              <FileName>ad5680.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\AD5680\ad5680.c</FilePath>
+            </File>
+            <File>
+              <FileName>ad5325.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\AD5325\ad5325.c</FilePath>
+            </File>
+            <File>
+              <FileName>24cxx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\24CXX\24cxx.c</FilePath>
+            </File>
+            <File>
+              <FileName>myiic.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\IIC\myiic.c</FilePath>
+            </File>
+            <File>
+              <FileName>tdc_gpx2.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\TDCGPX2\tdc_gpx2.c</FilePath>
+            </File>
+            <File>
+              <FileName>spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\SPI\spi.c</FilePath>
             </File>
           </Files>
         </Group>
